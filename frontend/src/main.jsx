@@ -263,7 +263,17 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
       <Section title="Taarifa binafsi za mwanachama">
         <div className="two-col">
           <Field label="Jina Kamili" value={application.full_name} onChange={(v) => update("full_name", v)} required />
-          <Field label="Jinsia" value={application.gender} onChange={(v) => update("gender", v)} required />
+          <Select
+            label="Jinsia"
+            value={application.gender}
+            onChange={(v) => update("gender", v)}
+            required
+            options={[
+              ["", ""],
+              ["Male", "Male"],
+              ["Female", "Female"],
+            ]}
+          />
           <Field label="Tarehe ya Kuzaliwa" type="date" value={application.date_of_birth} onChange={(v) => update("date_of_birth", v)} />
           <Field label="Umri" type="number" value={application.age || ""} onChange={(v) => update("age", v)} />
           <Field label="Namba ya Simu" value={application.phone_number} onChange={(v) => update("phone_number", v)} required />
@@ -319,7 +329,11 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
           rows={application.children}
           columns={[
             ["full_name", "Jina Kamili"],
-            ["gender", "Jinsia"],
+            ["gender", "Jinsia", "select", [
+              ["", ""],
+              ["Male", "Male"],
+              ["Female", "Female"],
+            ]],
             ["age", "Umri"],
             ["school_or_work", "Shule / Kazi"],
           ]}
@@ -481,6 +495,8 @@ function AdminReview({ application, onReview, notice }) {
   }, [application.id]);
 
   const set = (name, value) => setFields({ ...fields, [name]: value });
+  const location = [application.region, application.district].filter(Boolean).join(", ");
+  const emergency = [application.emergency_name, application.emergency_phone].filter(Boolean).join(" - ");
 
   return (
     <article className="review-panel">
@@ -489,16 +505,21 @@ function AdminReview({ application, onReview, notice }) {
           <p className="eyebrow">Application #{application.id}</p>
           <h2>{application.full_name}</h2>
         </div>
-        <StatusCard application={application} />
+        <div className="review-actions">
+          <button type="button" className="print-button" onClick={() => window.print()}>
+            Print form
+          </button>
+          <StatusCard application={application} />
+        </div>
       </div>
       <div className="summary-grid">
         <Summary label="Phone" value={application.phone_number} />
         <Summary label="Email" value={application.email} />
         <Summary label="NIDA" value={application.nida_number} />
-        <Summary label="Region" value={`${application.region}, ${application.district}`} />
+        <Summary label="Region" value={location} />
         <Summary label="Profession" value={application.profession} />
         <Summary label="Education" value={application.education_level} />
-        <Summary label="Emergency" value={`${application.emergency_name} - ${application.emergency_phone}`} />
+        <Summary label="Emergency" value={emergency} />
         <Summary label="Initial contribution" value="TZS 200,000" />
       </div>
       <Section title="Client details">
@@ -568,9 +589,7 @@ function AdminReview({ application, onReview, notice }) {
 }
 
 function ReadonlyRows({ rows, columns, emptyText }) {
-  const visibleRows = (Array.isArray(rows) ? rows : []).filter((row) =>
-    columns.some(([field]) => String(row?.[field] || "").trim()),
-  );
+  const visibleRows = Array.isArray(rows) ? rows : [];
 
   if (!visibleRows.length) {
     return <p className="muted">{emptyText}</p>;
@@ -585,7 +604,7 @@ function ReadonlyRows({ rows, columns, emptyText }) {
       {visibleRows.map((row, index) => (
         <div className="readonly-row" key={index} style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}>
           <span>{index + 1}</span>
-          {columns.map(([field]) => <strong key={field}>{row[field] || "Not provided"}</strong>)}
+          {columns.map(([field]) => <strong key={field}>{row[field] || ""}</strong>)}
         </div>
       ))}
     </div>
@@ -619,11 +638,11 @@ function TextArea({ label, value, onChange }) {
   );
 }
 
-function Select({ label, value, onChange, options }) {
+function Select({ label, value, onChange, options, required = false }) {
   return (
     <label className="field">
       <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <select value={value ?? ""} required={required} onChange={(event) => onChange(event.target.value)}>
         {options.map(([optionValue, optionLabel]) => (
           <option key={optionValue} value={optionValue}>{optionLabel}</option>
         ))}
@@ -657,9 +676,17 @@ function GridRows({ rows, columns, onChange }) {
       {rows.map((row, index) => (
         <div className="grid-row" key={index} style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}>
           <span>{index + 1}</span>
-          {columns.map(([field]) => (
-            <input key={field} value={row[field] || ""} onChange={(event) => onChange(index, field, event.target.value)} />
-          ))}
+          {columns.map(([field, , type, options]) =>
+            type === "select" ? (
+              <select key={field} value={row[field] || ""} onChange={(event) => onChange(index, field, event.target.value)}>
+                {options.map(([optionValue, optionLabel]) => (
+                  <option key={optionValue} value={optionValue}>{optionLabel}</option>
+                ))}
+              </select>
+            ) : (
+              <input key={field} value={row[field] || ""} onChange={(event) => onChange(index, field, event.target.value)} />
+            ),
+          )}
         </div>
       ))}
     </div>
@@ -670,7 +697,7 @@ function Summary({ label, value }) {
   return (
     <div className="summary">
       <span>{label}</span>
-      <strong>{value || "Not provided"}</strong>
+      <strong>{value || ""}</strong>
     </div>
   );
 }

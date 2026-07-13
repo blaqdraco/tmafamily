@@ -566,6 +566,22 @@ textarea {
   align-items: flex-start;
 }
 
+.review-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.print-button {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: white;
+  background: var(--primary);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -655,7 +671,8 @@ textarea {
   }
 
   .topbar,
-  .review-header {
+  .review-header,
+  .review-actions {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -680,5 +697,87 @@ textarea {
 
   .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  :root {
+    background: white;
+  }
+
+  body {
+    background: white;
+  }
+
+  .topbar,
+  .stats-grid,
+  .queue,
+  .print-button,
+  .form-actions,
+  .notice,
+  .error {
+    display: none !important;
+  }
+
+  .app-shell {
+    padding: 0;
+  }
+
+  .admin-dashboard,
+  .admin-layout {
+    display: block;
+  }
+
+  .review-panel {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .review-header {
+    align-items: flex-start;
+    border-bottom: 2px solid #111;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+
+  .review-actions {
+    display: block;
+  }
+
+  .status-card,
+  .summary,
+  .readonly-row span,
+  .readonly-row strong,
+  input,
+  select,
+  textarea {
+    border: 1px solid #999;
+    background: white !important;
+    box-shadow: none;
+  }
+
+  .section,
+  .summary,
+  .readonly-row,
+  .status-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .section {
+    margin-bottom: 12px;
+    padding: 14px;
+  }
+
+  .summary-grid,
+  .detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  textarea {
+    min-height: 70px;
   }
 }
