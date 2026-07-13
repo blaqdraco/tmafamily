@@ -102,7 +102,7 @@ function App() {
           <img src={tmaLogo} alt="TMA Action logo" />
           <div>
             <p className="eyebrow">TMA Family</p>
-            <h1>Registration Portal</h1>
+            <h1>{user.is_staff ? "Admin Console" : "Registration Portal"}</h1>
           </div>
         </div>
         <div className="top-actions">
@@ -173,22 +173,12 @@ function SupabaseSetupNotice() {
 }
 
 function Dashboard({ user }) {
-  const [tab, setTab] = useState(user.is_staff ? "admin" : "member");
+  if (user.is_staff) {
+    return <AdminArea />;
+  }
 
   return (
-    <>
-      <nav className="tabs">
-        <button className={tab === "member" ? "active" : ""} onClick={() => setTab("member")}>
-          <FilePenLine size={18} /> My registration
-        </button>
-        {user.is_staff && (
-          <button className={tab === "admin" ? "active" : ""} onClick={() => setTab("admin")}>
-            <ClipboardList size={18} /> Admin review
-          </button>
-        )}
-      </nav>
-      {tab === "member" ? <MemberArea /> : <AdminArea />}
-    </>
+    <MemberArea />
   );
 }
 
@@ -367,6 +357,7 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
 function AdminArea() {
   const [applications, setApplications] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [filter, setFilter] = useState("all");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -376,7 +367,10 @@ function AdminArea() {
   async function load() {
     const data = await listAllApplications();
     setApplications(data);
-    if (!selected && data[0]) setSelected(data[0]);
+    setSelected((current) => {
+      if (!current) return data[0] || null;
+      return data.find((item) => item.id === current.id) || data[0] || null;
+    });
   }
 
   async function review(action, fields) {
@@ -387,19 +381,83 @@ function AdminArea() {
     setNotice(data.email_warning || "Registration status updated and notification email sent.");
   }
 
+  function changeFilter(nextFilter) {
+    setFilter(nextFilter);
+    const nextSelected = applications.find((item) => nextFilter === "all" || item.status === nextFilter);
+    setSelected(nextSelected || null);
+  }
+
+  const filteredApplications = applications.filter((item) => filter === "all" || item.status === filter);
+
   return (
-    <section className="admin-layout">
-      <div className="queue">
-        <h2>Registration requests</h2>
-        {applications.map((item) => (
-          <button key={item.id} className={selected?.id === item.id ? "queue-item active" : "queue-item"} onClick={() => setSelected(item)}>
-            <strong>{item.full_name}</strong>
-            <span>{item.status_label}</span>
-          </button>
-        ))}
+    <section className="admin-dashboard">
+      <AdminStats applications={applications} />
+      <div className="admin-layout">
+        <div className="queue">
+          <div className="queue-heading">
+            <h2>Registered clients</h2>
+            <span>{filteredApplications.length} shown</span>
+          </div>
+          <div className="filter-row">
+            {[
+              ["all", "All"],
+              ["pending", "Pending"],
+              ["approved", "Approved"],
+              ["action_required", "Action"],
+              ["rejected", "Rejected"],
+            ].map(([value, label]) => (
+              <button key={value} className={filter === value ? "active" : ""} onClick={() => changeFilter(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {filteredApplications.map((item) => (
+            <button key={item.id} className={selected?.id === item.id ? "queue-item active" : "queue-item"} onClick={() => setSelected(item)}>
+              <strong>{item.full_name || "Unnamed applicant"}</strong>
+              <span>{item.status_label}</span>
+              <small>{item.phone_number || item.email || "No contact provided"}</small>
+            </button>
+          ))}
+          {!filteredApplications.length && <p className="muted">No clients in this view.</p>}
+        </div>
+        {selected ? <AdminReview application={selected} onReview={review} notice={notice} /> : <p>No requests found.</p>}
       </div>
-      {selected ? <AdminReview application={selected} onReview={review} notice={notice} /> : <p>No requests found.</p>}
     </section>
+  );
+}
+
+function AdminStats({ applications }) {
+  const counts = applications.reduce(
+    (total, item) => {
+      total[item.status] = (total[item.status] || 0) + 1;
+      total.all += 1;
+      return total;
+    },
+    { all: 0, pending: 0, approved: 0, action_required: 0, rejected: 0, draft: 0 },
+  );
+  const approvedAmount = counts.approved * 200000;
+
+  return (
+    <div className="stats-grid">
+      <StatCard icon={<ClipboardList size={22} />} label="Total registered" value={counts.all} />
+      <StatCard icon={<Clock3 size={22} />} label="Pending review" value={counts.pending} />
+      <StatCard icon={<CheckCircle2 size={22} />} label="Approved clients" value={counts.approved} />
+      <StatCard icon={<FilePenLine size={22} />} label="Action required" value={counts.action_required} />
+      <StatCard icon={<XCircle size={22} />} label="Rejected" value={counts.rejected} />
+      <StatCard icon={<ShieldCheck size={22} />} label="Approved amount" value={formatTZS(approvedAmount)} />
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value }) {
+  return (
+    <div className="stat-card">
+      {icon}
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
   );
 }
 
@@ -441,7 +499,55 @@ function AdminReview({ application, onReview, notice }) {
         <Summary label="Profession" value={application.profession} />
         <Summary label="Education" value={application.education_level} />
         <Summary label="Emergency" value={`${application.emergency_name} - ${application.emergency_phone}`} />
+        <Summary label="Initial contribution" value="TZS 200,000" />
       </div>
+      <Section title="Client details">
+        <div className="detail-grid">
+          <Summary label="Full name" value={application.full_name} />
+          <Summary label="Gender" value={application.gender} />
+          <Summary label="Date of birth" value={formatDate(application.date_of_birth)} />
+          <Summary label="Age" value={application.age} />
+          <Summary label="Residential address" value={application.residential_address} />
+          <Summary label="Institution / company" value={application.institution} />
+          <Summary label="Work experience" value={application.work_experience_years ? `${application.work_experience_years} years` : ""} />
+          <Summary label="Member group" value={memberGroupLabel(application.member_group)} />
+        </div>
+      </Section>
+      <Section title="Family and emergency">
+        <div className="detail-grid">
+          <Summary label="Marital status" value={maritalStatusLabel(application.marital_status)} />
+          <Summary label="Spouse name" value={application.spouse_name} />
+          <Summary label="Spouse phone" value={application.spouse_phone} />
+          <Summary label="Emergency name" value={application.emergency_name} />
+          <Summary label="Emergency relationship" value={application.emergency_relationship} />
+          <Summary label="Emergency phone" value={application.emergency_phone} />
+          <Summary label="Emergency address" value={application.emergency_address} />
+          <Summary label="Wedding / sendoff beneficiary" value={application.wedding_sendoff_beneficiary} />
+        </div>
+      </Section>
+      <Section title="Parents / guardians / in-laws">
+        <ReadonlyRows
+          rows={application.parents}
+          columns={[
+            ["full_name", "Full name"],
+            ["relationship", "Relationship"],
+            ["phone_number", "Phone"],
+          ]}
+          emptyText="No parent, guardian, or in-law details were provided."
+        />
+      </Section>
+      <Section title="Children">
+        <ReadonlyRows
+          rows={application.children}
+          columns={[
+            ["full_name", "Full name"],
+            ["gender", "Gender"],
+            ["age", "Age"],
+            ["school_or_work", "School / work"],
+          ]}
+          emptyText="No children details were provided."
+        />
+      </Section>
       <Section title="Office action">
         <div className="three-col">
           <Field label="Namba ya Usajili" value={fields.office_registration_number} onChange={(v) => set("office_registration_number", v)} />
@@ -458,6 +564,31 @@ function AdminReview({ application, onReview, notice }) {
         {notice && <p className={notice.includes("not sent") ? "error" : "notice"}>{notice}</p>}
       </Section>
     </article>
+  );
+}
+
+function ReadonlyRows({ rows, columns, emptyText }) {
+  const visibleRows = (Array.isArray(rows) ? rows : []).filter((row) =>
+    columns.some(([field]) => String(row?.[field] || "").trim()),
+  );
+
+  if (!visibleRows.length) {
+    return <p className="muted">{emptyText}</p>;
+  }
+
+  return (
+    <div className="readonly-table">
+      <div className="readonly-row header" style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}>
+        <span>No.</span>
+        {columns.map(([, label]) => <span key={label}>{label}</span>)}
+      </div>
+      {visibleRows.map((row, index) => (
+        <div className="readonly-row" key={index} style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}>
+          <span>{index + 1}</span>
+          {columns.map(([field]) => <strong key={field}>{row[field] || "Not provided"}</strong>)}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -542,6 +673,36 @@ function Summary({ label, value }) {
       <strong>{value || "Not provided"}</strong>
     </div>
   );
+}
+
+function formatTZS(amount) {
+  return new Intl.NumberFormat("en-TZ", {
+    style: "currency",
+    currency: "TZS",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(value));
+}
+
+function memberGroupLabel(value) {
+  return {
+    youth: "Vijana 18-30",
+    middle: "Rika la Kati 31-54",
+    elder: "Wazee 55-100",
+  }[value] || value;
+}
+
+function maritalStatusLabel(value) {
+  return {
+    single: "Mseja",
+    married: "Nimeoa / Nimeolewa",
+    widowed: "Mjane / Mgane",
+    divorced: "Mtalaka",
+  }[value] || value;
 }
 
 function normalizeApplication(application) {
