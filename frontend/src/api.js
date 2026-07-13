@@ -18,6 +18,11 @@ const statusLabels = {
   action_required: "Action required",
 };
 
+function authRedirectUrl() {
+  if (typeof window === "undefined") return undefined;
+  return window.location.origin;
+}
+
 function requireSupabase() {
   if (!isSupabaseConfigured) {
     throw new Error("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
@@ -110,6 +115,7 @@ export async function registerUser(form) {
     email: form.email,
     password: form.password,
     options: {
+      emailRedirectTo: authRedirectUrl(),
       data: {
         username: form.username,
         first_name: form.first_name,
