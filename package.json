@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "scripts": {
+    "install:frontend": "cd frontend && npm install",
+    "build": "cd frontend && npm run build"
+  },
+  "dependencies": {
+    "nodemailer": "^9.0.3"
+  }
+}

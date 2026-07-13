@@ -367,6 +367,7 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
 function AdminArea() {
   const [applications, setApplications] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     load();
@@ -379,9 +380,11 @@ function AdminArea() {
   }
 
   async function review(action, fields) {
+    setNotice("");
     const data = await reviewApplication(selected.id, action, fields);
     setSelected(data);
     await load();
+    setNotice(data.email_warning || "Registration status updated and notification email sent.");
   }
 
   return (
@@ -395,12 +398,12 @@ function AdminArea() {
           </button>
         ))}
       </div>
-      {selected ? <AdminReview application={selected} onReview={review} /> : <p>No requests found.</p>}
+      {selected ? <AdminReview application={selected} onReview={review} notice={notice} /> : <p>No requests found.</p>}
     </section>
   );
 }
 
-function AdminReview({ application, onReview }) {
+function AdminReview({ application, onReview, notice }) {
   const [fields, setFields] = useState({
     office_registration_number: application.office_registration_number || "",
     office_received_by: application.office_received_by || "",
@@ -452,6 +455,7 @@ function AdminReview({ application, onReview }) {
           <button type="button" onClick={() => onReview("reject", fields)}>Reject</button>
           <button type="button" className="primary" onClick={() => onReview("approve", fields)}>Approve</button>
         </div>
+        {notice && <p className={notice.includes("not sent") ? "error" : "notice"}>{notice}</p>}
       </Section>
     </article>
   );

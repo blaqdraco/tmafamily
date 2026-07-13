@@ -232,5 +232,33 @@ export async function reviewApplication(id, action, fields) {
     .select()
     .single();
   raise(error);
-  return withStatusLabel(data);
+  const application = withStatusLabel(data);
+
+  if (["approve", "reject", "request_action"].includes(action)) {
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      raise(sessionError);
+
+      const token = sessionData.session?.access_token;
+      if (token) {
+        const emailResponse = await fetch("/api/send-action-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ application, action, fields }),
+        });
+
+        if (!emailResponse.ok) {
+          const emailData = await emailResponse.json().catch(() => ({}));
+          application.email_warning = emailData.error || "Status updated, but notification email was not sent.";
+        }
+      }
+    } catch (emailError) {
+      application.email_warning = emailError.message || "Status updated, but notification email was not sent.";
+    }
+  }
+
+  return application;
 }

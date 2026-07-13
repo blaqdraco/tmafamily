@@ -109,9 +109,17 @@ Add these Vercel environment variables:
 ```text
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_USER=tmafamily@tmafamily.tmaglobal.org
+SMTP_PASSWORD=your-hostinger-mailbox-password
+SMTP_FROM_EMAIL=tmafamily@tmafamily.tmaglobal.org
+SMTP_FROM_NAME=TMA GLOBAL
 ```
 
 Then deploy.
+
+The SMTP variables are used by the Vercel `/api/send-action-email` function for admin actions such as approve, reject, and request action. Keep `SMTP_PASSWORD` only in Vercel environment variables; do not commit it.
 
 ## Notes
 
