@@ -2,8 +2,6 @@
 
 Vercel-ready React registration portal for TMA Association / TMA Family, using Supabase for auth and database.
 
-The Django backend is still in `backend/`, but it is ignored for the current deployment plan.
-
 ## Features
 
 - Member account creation and login with Supabase Auth
@@ -18,7 +16,6 @@ The Django backend is still in `backend/`, but it is ignored for the current dep
 ```text
 frontend/          React app powered by Vite
 supabase/schema.sql Supabase tables, policies, trigger, and admin support
-backend/           Old Django backend, parked for now
 ```
 
 ## Supabase setup
@@ -45,6 +42,28 @@ cp .env.example .env.local
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
+
+## Supabase auth redirects
+
+If confirmation emails point to `localhost:3000`, update Supabase Auth URL settings:
+
+1. Open Supabase Dashboard.
+2. Go to `Authentication` -> `URL Configuration`.
+3. Set `Site URL` to your deployed Vercel URL, for example:
+
+```text
+https://your-vercel-app.vercel.app
+```
+
+4. Add these `Redirect URLs`:
+
+```text
+https://your-vercel-app.vercel.app/**
+http://127.0.0.1:5173/**
+http://localhost:5173/**
+```
+
+Supabase uses these settings for confirmation, magic link, recovery, and invite links.
 
 ## Make an admin user
 
@@ -78,12 +97,11 @@ http://127.0.0.1:5173
 
 ## Deploy free on Vercel
 
-Use these Vercel settings:
+This repo includes `vercel.json`, so Vercel can deploy from the repo root. If Vercel asks for settings, use:
 
 ```text
-Root Directory: frontend
-Build Command: npm run build
-Output Directory: dist
+Build Command: cd frontend && npm run build
+Output Directory: frontend/dist
 ```
 
 Add these Vercel environment variables:
