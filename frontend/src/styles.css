@@ -840,17 +840,30 @@ textarea {
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 12mm 14mm;
+  }
+
   :root {
     background: white;
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
   }
 
   body {
     background: white;
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11pt;
+    line-height: 1.25;
   }
 
   .topbar,
   .stats-grid,
   .queue,
+  .review-header,
+  .status-card,
   .print-button,
   .form-actions,
   .notice,
@@ -874,71 +887,254 @@ textarea {
     box-shadow: none;
   }
 
-  .review-header {
-    align-items: flex-start;
-    border-bottom: 2px solid #111;
-    margin-bottom: 14px;
-    padding-bottom: 10px;
-  }
-
-  .review-actions {
-    display: block;
-  }
-
-  .status-card,
-  .summary,
-  .check-options span,
-  .name-lines strong,
-  .readonly-row span,
-  .readonly-row strong,
-  input,
-  select,
-  textarea {
-    border: 1px solid #999;
-    background: white !important;
-    box-shadow: none;
-  }
-
   .section,
-  .summary,
-  .readonly-row,
-  .status-card {
+  .readonly-table,
+  .name-lines {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .section {
-    margin-bottom: 12px;
-    padding: 14px;
+    display: block;
+    margin: 0 0 7pt;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
   }
 
+  .section legend {
+    display: block;
+    width: 100%;
+    margin: 8pt 0 4pt;
+    padding: 0;
+    color: #000;
+    font-family: Arial, sans-serif;
+    font-size: 10.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .two-col,
+  .three-col,
   .summary-grid,
   .detail-grid,
   .office-placeholder-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    display: block;
   }
 
   .document-header {
-    border-radius: 0;
-    margin-bottom: 12px;
-    padding: 10px;
+    display: block;
+    margin: 0 0 10pt;
+    padding: 0;
+    border: 0;
+    text-align: center;
   }
 
   .document-header img {
-    width: 72px;
-    height: 72px;
+    width: 78px;
+    height: 82px;
+    margin: 0 auto 4pt;
+    object-fit: contain;
   }
 
   .document-header h2 {
-    font-size: 26px;
+    margin: 0;
+    color: #000;
+    font-family: Arial, sans-serif;
+    font-size: 15pt;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .document-header p {
+    margin: 4pt 0 0;
+    color: #000;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+    font-weight: 700;
+    text-align: center;
   }
 
   .guide-card {
     display: none;
   }
 
+  .summary {
+    display: grid;
+    grid-template-columns: max-content minmax(120px, 1fr);
+    align-items: end;
+    gap: 6pt;
+    min-height: 0;
+    margin: 0 0 4pt;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent !important;
+  }
+
+  .summary span {
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11pt;
+    font-weight: 400;
+    text-transform: none;
+  }
+
+  .summary span::after {
+    content: ":";
+  }
+
+  .summary strong {
+    min-height: 14pt;
+    margin: 0;
+    padding: 0 3pt 1pt;
+    border-bottom: 1px solid #000;
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11pt;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .field {
+    display: grid;
+    grid-template-columns: max-content minmax(140px, 1fr);
+    align-items: end;
+    gap: 6pt;
+    margin: 0 0 4pt;
+  }
+
+  .field span,
+  .segmented-wrap > span,
+  .name-lines > span {
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11pt;
+    font-weight: 400;
+  }
+
+  .field span::after {
+    content: ":";
+  }
+
+  input,
+  select,
   textarea {
-    min-height: 70px;
+    min-height: 14pt;
+    padding: 0 3pt 1pt;
+    border: 0;
+    border-bottom: 1px solid #000;
+    border-radius: 0;
+    color: #000;
+    background: transparent !important;
+    box-shadow: none;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11pt;
+  }
+
+  textarea {
+    min-height: 34pt;
+    border: 1px solid #000;
+    resize: none;
+  }
+
+  .check-options {
+    display: block;
+    margin: 0 0 4pt;
+  }
+
+  .check-options span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5pt;
+    min-height: 0;
+    margin: 0 14pt 4pt 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent !important;
+    color: #000;
+    font-weight: 400;
+  }
+
+  .check-options strong {
+    width: 12pt;
+    height: 12pt;
+    border: 1px solid #000;
+    color: #000;
+    font-family: Arial, sans-serif;
+    font-size: 9pt;
+    line-height: 1;
+  }
+
+  .section-note {
+    margin: 0 0 4pt;
+    color: #000;
+    font-size: 11pt;
+    line-height: 1.25;
+  }
+
+  .readonly-table {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 3pt;
+  }
+
+  .readonly-row {
+    display: table-row !important;
+  }
+
+  .readonly-row span,
+  .readonly-row strong {
+    display: table-cell;
+    min-height: 0;
+    padding: 4pt 5pt;
+    border: 1px solid #000;
+    border-radius: 0;
+    background: transparent !important;
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 10.5pt;
+    font-weight: 400;
+    vertical-align: middle;
+  }
+
+  .readonly-row.header span {
+    color: #000;
+    font-family: Arial, sans-serif;
+    font-size: 9.5pt;
+    font-weight: 700;
+    text-transform: none;
+  }
+
+  .readonly-row > span:first-child,
+  .readonly-row > strong:first-child {
+    width: 28pt;
+    text-align: center;
+  }
+
+  .name-lines {
+    display: block;
+    margin-top: 5pt;
+  }
+
+  .name-lines > span {
+    display: block;
+    margin-bottom: 3pt;
+  }
+
+  .name-lines strong {
+    display: block;
+    min-height: 15pt;
+    margin-bottom: 3pt;
+    padding: 0 3pt 1pt;
+    border: 0;
+    border-bottom: 1px solid #000;
+    border-radius: 0;
+    background: transparent !important;
+    color: #000;
+    font-weight: 400;
   }
 }
