@@ -529,8 +529,13 @@ textarea {
 
 .admin-layout {
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
   gap: 18px;
+  align-items: start;
+}
+
+.admin-layout > * {
+  min-width: 0;
 }
 
 .admin-dashboard {
@@ -582,6 +587,7 @@ textarea {
   display: grid;
   gap: 10px;
   align-content: start;
+  overflow: hidden;
 }
 
 .queue-heading {
@@ -591,6 +597,11 @@ textarea {
   gap: 12px;
 }
 
+.queue-heading h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .queue-heading span,
 .queue-item small,
 .muted {
@@ -598,12 +609,13 @@ textarea {
 }
 
 .filter-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
 .filter-row button {
+  flex: 1 1 calc(50% - 6px);
   min-height: 36px;
   padding: 7px 8px;
   border-radius: 6px;
@@ -626,6 +638,14 @@ textarea {
   color: var(--foreground);
   text-align: left;
   background: var(--muted);
+  overflow: hidden;
+}
+
+.queue-item strong,
+.queue-item span,
+.queue-item small {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .queue-item.active {
@@ -637,11 +657,19 @@ textarea {
   color: hsl(0 0% 100% / 0.8);
 }
 
+.review-panel {
+  overflow: hidden;
+}
+
 .review-header {
   display: flex;
   justify-content: space-between;
   gap: 18px;
   align-items: flex-start;
+}
+
+.review-header h2 {
+  overflow-wrap: anywhere;
 }
 
 .review-actions {
