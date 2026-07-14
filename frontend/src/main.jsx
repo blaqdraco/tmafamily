@@ -511,8 +511,7 @@ function AdminArea() {
       <div className="admin-layout">
         <div className="queue">
           <div className="queue-heading">
-            <h2>Registered clients</h2>
-            <span>{filteredApplications.length} shown</span>
+            <h2>Registered clients: {filteredApplications.length}</h2>
           </div>
           <div className="filter-row">
             {[
