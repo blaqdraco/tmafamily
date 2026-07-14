@@ -401,7 +401,7 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
         <ReadOnlyNames title="Majina ya watoto" rows={application.children} field="full_name" />
       </Section>
 
-      <Section title="TAMKO LA MWANACHAMA">
+      <Section title="9. TAMKO LA MWANACHAMA">
         <DeclarationBlock name={application.full_name} date={formatDate(application.submitted_at || application.created_at)} />
       </Section>
 
@@ -715,7 +715,7 @@ function AdminReview({ application, onReview, notice }) {
         <ReadOnlyNames title="Majina ya watoto" rows={application.children} field="full_name" />
       </Section>
 
-      <Section title="TAMKO LA MWANACHAMA">
+      <Section title="9. TAMKO LA MWANACHAMA">
         <DeclarationBlock name={application.full_name} date={formatDate(application.submitted_at || application.created_at)} />
       </Section>
 
