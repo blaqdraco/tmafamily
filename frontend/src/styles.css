@@ -754,6 +754,21 @@ textarea {
   background: var(--muted);
 }
 
+.declaration-block p {
+  margin: 0 0 14px;
+  color: hsl(215 28% 26%);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.declaration-block p span {
+  min-width: 220px;
+  display: inline-block;
+  padding: 0 8px 2px;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+}
+
 .readonly-table {
   display: grid;
   gap: 8px;
@@ -1136,5 +1151,20 @@ textarea {
     background: transparent !important;
     color: #000;
     font-weight: 400;
+  }
+
+  .declaration-block p {
+    margin: 0 0 5pt;
+    color: #000;
+    font-size: 11pt;
+    font-weight: 400;
+    line-height: 1.3;
+  }
+
+  .declaration-block p span {
+    min-width: 210pt;
+    padding: 0 3pt 1pt;
+    border-bottom: 1px solid #000;
+    color: #000;
   }
 }

@@ -402,14 +402,7 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
       </Section>
 
       <Section title="TAMKO LA MWANACHAMA">
-        <label className="check-row">
-          <input
-            type="checkbox"
-            checked={application.declaration_accepted}
-            onChange={(event) => update("declaration_accepted", event.target.checked)}
-          />
-          Nakubali kujiunga na TMA Association na nitazingatia masharti, kanuni na taratibu zote za huduma.
-        </label>
+        <DeclarationBlock name={application.full_name} date={formatDate(application.submitted_at || application.created_at)} />
       </Section>
 
       {notice && <p className="notice">{notice}</p>}
@@ -723,14 +716,7 @@ function AdminReview({ application, onReview, notice }) {
       </Section>
 
       <Section title="TAMKO LA MWANACHAMA">
-        <div className="detail-grid">
-          <Summary label="Mimi" value={application.full_name} />
-          <Summary label="Sahihi ya Mwanachama" value="" />
-          <Summary label="Tarehe" value={formatDate(application.submitted_at || application.created_at)} />
-        </div>
-        <p className="section-note">
-          Nakubali kujiunga na TMA Association na nitazingatia masharti, kanuni na taratibu zote za huduma.
-        </p>
+        <DeclarationBlock name={application.full_name} date={formatDate(application.submitted_at || application.created_at)} />
       </Section>
 
       <Section title="10. MATUMIZI YA OFISI TU">
@@ -772,6 +758,21 @@ function ReadonlyRows({ rows, columns, emptyText }) {
           {columns.map(([field]) => <strong key={field}>{row[field] || ""}</strong>)}
         </div>
       ))}
+    </div>
+  );
+}
+
+function DeclarationBlock({ name, date }) {
+  return (
+    <div className="declaration-block">
+      <p>
+        Mimi <span>{name || ""}</span> nakubali kujiunga na TMA Family na nitazingatia masharti, kanuni na taratibu
+        zote za huduma.
+      </p>
+      <div className="detail-grid">
+        <Summary label="Sahihi ya Mwanachama" value="" />
+        <Summary label="Tarehe" value={date} />
+      </div>
     </div>
   );
 }
