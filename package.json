@@ -2,9 +2,14 @@
   "type": "module",
   "scripts": {
     "install:frontend": "cd frontend && npm install",
-    "build": "cd frontend && npm run build"
+    "build": "cd frontend && npm run build",
+    "supabase:seed": "supabase db execute --file supabase/seed.sql --linked",
+    "supabase:seed:local": "supabase db reset"
   },
   "dependencies": {
     "nodemailer": "^9.0.3"
+  },
+  "devDependencies": {
+    "supabase": "^2.20.12"
   }
 }

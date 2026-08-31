@@ -81,13 +81,6 @@ export const ROLE_PORTALS = {
   },
 };
 
-export const TEST_LOGINS = [
-  { role: "Communication", email: "communication@tmafamily.test", password: "TmaTest@2026" },
-  { role: "HR", email: "hr@tmafamily.test", password: "TmaTest@2026" },
-  { role: "Finance", email: "finance@tmafamily.test", password: "TmaTest@2026" },
-  { role: "Admin", email: "admin@tmafamily.test", password: "TmaTest@2026" },
-];
-
 export function isStaffRole(role) {
   return [ROLES.COMMUNICATION, ROLES.HR, ROLES.FINANCE, ROLES.ADMIN].includes(role);
 }

@@ -99,12 +99,30 @@ After running `workflow-migration.sql`, create these users in Supabase Auth and 
 
 Then run:
 
-```sql
-update public.profiles set role = 'communication' where id = (select id from auth.users where email = 'communication@tmafamily.test');
-update public.profiles set role = 'hr' where id = (select id from auth.users where email = 'hr@tmafamily.test');
-update public.profiles set role = 'finance' where id = (select id from auth.users where email = 'finance@tmafamily.test');
-update public.profiles set role = 'admin', is_admin = true where id = (select id from auth.users where email = 'admin@tmafamily.test');
+```bash
+npm install
+supabase login
+supabase link --project-ref your-project-ref
+npm run supabase:seed
 ```
+
+Or for local Supabase:
+
+```bash
+supabase start
+npm run supabase:seed:local
+```
+
+The seed file creates these accounts (password `TmaTest@2026` for all):
+
+| Role | Email |
+|------|-------|
+| Communication | `communication@tmafamily.test` |
+| HR | `hr@tmafamily.test` |
+| Finance | `finance@tmafamily.test` |
+| Admin | `admin@tmafamily.test` |
+
+Manual role SQL is only needed if you skip `supabase/seed.sql`.
 
 Workflow stages:
 

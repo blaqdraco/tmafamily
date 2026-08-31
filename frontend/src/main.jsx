@@ -27,7 +27,6 @@ import { ApplicationDetails, WorkflowTimeline } from "./ApplicationDetails";
 import {
   ROLE_PORTALS,
   ROLES,
-  TEST_LOGINS,
   isValidTanzaniaNin,
 } from "./workflowConfig";
 import tmaLogo from "./assets-tma-association-logo.jpeg";
@@ -129,7 +128,6 @@ function App() {
             message={message}
             setMessage={setMessage}
           />
-          <TestLoginsPanel />
           {!isSupabaseConfigured && <SupabaseSetupNotice />}
         </section>
       </main>
@@ -213,24 +211,6 @@ function SupabaseSetupNotice() {
     <div className="setup-notice">
       <strong>Supabase setup needed</strong>
       <span>Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `frontend/.env.local` and in Vercel.</span>
-    </div>
-  );
-}
-
-function TestLoginsPanel() {
-  return (
-    <div className="test-logins">
-      <strong>Test staff logins</strong>
-      <p>Create these users in Supabase Auth, run `workflow-migration.sql`, then assign roles.</p>
-      <ul>
-        {TEST_LOGINS.map((item) => (
-          <li key={item.email}>
-            <span>{item.role}</span>
-            <code>{item.email}</code>
-            <code>{item.password}</code>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

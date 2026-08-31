@@ -1,0 +1,9 @@
+# For documentation, see https://supabase.com/docs/guides/cli/config
+project_id = "tmafamily"
+
+[db]
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
