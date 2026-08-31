@@ -40,26 +40,30 @@ const emptyApplication = {
   education_level: "",
   work_experience_years: "",
   marital_status: "single",
-  spouse_name: "",
-  spouse_phone: "",
   member_group: "youth",
-  parents: Array.from({ length: 4 }, () => ({ full_name: "", relationship: "", phone_number: "" })),
-  children: Array.from({ length: 4 }, () => ({ full_name: "", gender: "", age: "", school_or_work: "" })),
+  parents: Array.from({ length: 2 }, () => ({ full_name: "", relationship: "", phone_number: "" })),
+  children: Array.from({ length: 4 }, () => ({ full_name: "", gender: "", date_of_birth: "", age: "", school_or_work: "" })),
   emergency_name: "",
   emergency_relationship: "",
   emergency_phone: "",
   emergency_address: "",
-  wedding_sendoff_beneficiary: "",
   declaration_accepted: false,
 };
 
+const FORM_STEPS = [
+  { id: "personal", label: "Taarifa Binafsi" },
+  { id: "family", label: "Familia" },
+  { id: "finish", label: "Kukamilisha" },
+];
+
 const contributionRules = [
-  "Kila mwanachama atatoa mchango wa awali wa TZS 200,000.00.",
+  "Kila mwanachama atatoa mchango wa awali wa TZS 200,000.00 (Mkoba).",
   "Mwisho wa kutoa mchango wa awali ni tarehe 31/09/2026.",
   "Kwa kila tukio la shida au raha, kila mwanachama atachangia TZS 100,000.00.",
   "Kila mwanachama atatakiwa kuweka akiba ya miezi miwili sawa na TZS 200,000.00.",
   "Baada ya tukio, wanachama watarejesha fedha zilizotolewa ili kuendeleza mfuko wa kikundi ndani ya siku 30.",
-  "Kutakuwa na ada ya mwaka ya TZS 240,000.00 sawa na TZS 20,000.00 kila mwezi kwa ajili ya shughuli za sekretariati.",
+  "Ada ya mwaka ni TZS 240,000.00 (TZS 20,000.00 kila mwezi au TZS 120,000.00 kwa miezi 6) kwa shughuli za sekretariati.",
+  "Malipo yanaweza kufanywa kupitia Mkoba au CRDB.",
 ];
 
 const eligibilityRules = [
@@ -244,9 +248,11 @@ function MemberArea() {
         <h2>Registration status</h2>
         {latest ? <StatusCard application={latest} /> : <p>No registration has been started yet.</p>}
         <div className="info-list">
-          <p>Initial contribution: TZS 200,000</p>
+          <p>Initial contribution: TZS 200,000 (Mkoba)</p>
           <p>Event contribution: TZS 100,000</p>
-          <p>Annual secretariat fee: TZS 240,000</p>
+          <p>Annual fee (Ada): TZS 240,000</p>
+          <p>Payment plans: TZS 20,000/month or TZS 120,000/6 months</p>
+          <p>Payment methods: Mkoba / CRDB</p>
           <p>Contact: 0764223041</p>
         </div>
       </aside>
@@ -278,137 +284,187 @@ function StatusCard({ application }) {
 }
 
 function ApplicationForm({ application, setApplication, onSave, notice }) {
+  const [step, setStep] = useState(0);
+  const [errors, setErrors] = useState([]);
+
   const update = (name, value) => setApplication({ ...application, [name]: value });
   const updateList = (listName, index, field, value) => {
     const rows = [...application[listName]];
     rows[index] = { ...rows[index], [field]: value };
+    if (listName === "children" && field === "date_of_birth") {
+      rows[index].age = ageFromBirthdate(value);
+    }
     update(listName, rows);
   };
+
+  function goNext() {
+    const stepErrors = validateFormStep(step, application);
+    setErrors(stepErrors);
+    if (!stepErrors.length) setStep((current) => Math.min(current + 1, FORM_STEPS.length - 1));
+  }
+
+  function goBack() {
+    setErrors([]);
+    setStep((current) => Math.max(current - 1, 0));
+  }
+
+  function submitRegistration() {
+    const formErrors = validateFullForm(application);
+    setErrors(formErrors);
+    if (!formErrors.length) onSave(true);
+  }
 
   return (
     <form className="registration-form" onSubmit={(event) => event.preventDefault()}>
       <DocumentHeader subtitle="MWONGOZO WA KUJIUNGA NA HUDUMA YA TMA FAMILY" />
-      <MembershipGuide />
+      {step === 0 && <MembershipGuide />}
 
-      <Section title="SEHEMU YA PILI: FOMU YA USAJILI WA MWANACHAMA">
-        <div className="office-placeholder-grid">
-          <Summary label="Namba ya Usajili" value="" />
-          <Summary label="Tarehe ya Kupokea Fomu" value="" />
-          <Summary label="Imepokelewa na" value="" />
-          <Summary label="Sahihi" value="" />
+      <div className="form-steps">
+        {FORM_STEPS.map((item, index) => (
+          <div key={item.id} className={`form-step ${index === step ? "active" : ""} ${index < step ? "done" : ""}`}>
+            <span>{index + 1}</span>
+            <strong>{item.label}</strong>
+          </div>
+        ))}
+      </div>
+
+      {step === 0 && (
+        <>
+          <Section title="SEHEMU YA PILI: FOMU YA USAJILI WA MWANACHAMA">
+            <div className="office-placeholder-grid">
+              <Summary label="Namba ya Usajili" value="" />
+              <Summary label="Tarehe ya Kupokea Fomu" value="" />
+              <Summary label="Imepokelewa na" value="" />
+              <Summary label="Sahihi" value="" />
+            </div>
+          </Section>
+
+          <Section title="1. TAARIFA BINAFSI ZA MWANACHAMA">
+            <div className="two-col">
+              <Field label="Jina Kamili" value={application.full_name} onChange={(v) => update("full_name", v)} required />
+              <Select
+                label="Jinsia"
+                value={application.gender}
+                onChange={(v) => update("gender", v)}
+                required
+                options={[
+                  ["", ""],
+                  ["Male", "Male"],
+                  ["Female", "Female"],
+                ]}
+              />
+              <Field label="Tarehe ya Kuzaliwa" type="date" value={application.date_of_birth} onChange={(v) => update("date_of_birth", v)} />
+              <Field label="Umri" type="number" value={application.age || ""} onChange={(v) => update("age", v)} />
+              <Field label="Namba ya Simu" value={application.phone_number} onChange={(v) => update("phone_number", v)} required />
+              <Field label="Barua Pepe" type="email" value={application.email} onChange={(v) => update("email", v)} required />
+              <Field label="Namba ya NIDA" value={application.nida_number} onChange={(v) => update("nida_number", v)} required />
+              <Field label="Mkoa" value={application.region} onChange={(v) => update("region", v)} required />
+              <Field label="Wilaya" value={application.district} onChange={(v) => update("district", v)} required />
+              <Field label="Kazi / Profession" value={application.profession} onChange={(v) => update("profession", v)} required />
+              <Field label="Taasisi / Kampuni" value={application.institution} onChange={(v) => update("institution", v)} />
+              <Field label="Kiwango cha Elimu" value={application.education_level} onChange={(v) => update("education_level", v)} required />
+              <Field label="Uzoefu wa Kazi (Miaka)" type="number" value={application.work_experience_years || ""} onChange={(v) => update("work_experience_years", v)} />
+            </div>
+            <TextArea label="Anwani ya Makazi" value={application.residential_address} onChange={(v) => update("residential_address", v)} />
+          </Section>
+
+          <Section title="2. HALI YA NDOA">
+            <Select label="Hali ya Ndoa" value={application.marital_status} onChange={(v) => update("marital_status", v)} options={[
+              ["single", "Mseja"],
+              ["married", "Nimeoa / Nimeolewa"],
+              ["widowed", "Mjane / Mgane"],
+              ["divorced", "Mtalaka"],
+            ]} />
+          </Section>
+
+          <Section title="3. MAELEZO YA KUNDI LA MWANACHAMA">
+            <Segmented
+              label="Mwanachama yupo kundi gani?"
+              value={application.member_group}
+              onChange={(v) => update("member_group", v)}
+              options={[
+                ["youth", "Vijana 18-30"],
+                ["middle", "Rika la Kati 31-54"],
+                ["elder", "Wazee 55-100"],
+              ]}
+            />
+          </Section>
+        </>
+      )}
+
+      {step === 1 && (
+        <>
+          <Section title="4. TAARIFA ZA WAZAZI / WALEZI / WAKWE">
+            <Field label="Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya 02)" value={filledRowCount(application.parents)} onChange={() => {}} type="number" readOnly />
+            <GridRows
+              rows={application.parents}
+              columns={[
+                ["full_name", "Jina Kamili"],
+                ["relationship", "Uhusiano"],
+                ["phone_number", "Namba ya Simu"],
+              ]}
+              onChange={(i, field, value) => updateList("parents", i, field, value)}
+            />
+          </Section>
+
+          <Section title="5. TAARIFA ZA WATOTO (KWA WALIO NA WATOTO)">
+            <Field label="Idadi ya Watoto (Si zaidi ya wanne)" value={filledRowCount(application.children)} onChange={() => {}} type="number" readOnly />
+            <GridRows
+              rows={application.children}
+              columns={[
+                ["full_name", "Jina Kamili"],
+                ["gender", "Jinsia", "select", [
+                  ["", ""],
+                  ["Male", "Male"],
+                  ["Female", "Female"],
+                ]],
+                ["date_of_birth", "Tarehe ya Kuzaliwa", "date"],
+                ["age", "Umri", "number", [], true],
+                ["school_or_work", "Shule / Kazi"],
+              ]}
+              onChange={(i, field, value) => updateList("children", i, field, value)}
+            />
+          </Section>
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <Section title="7. TAARIFA ZA DHARURA">
+            <div className="two-col">
+              <Field label="Jina la Mtu wa Dharura" value={application.emergency_name} onChange={(v) => update("emergency_name", v)} required />
+              <Field label="Uhusiano" value={application.emergency_relationship} onChange={(v) => update("emergency_relationship", v)} required />
+              <Field label="Namba ya Simu" value={application.emergency_phone} onChange={(v) => update("emergency_phone", v)} required />
+            </div>
+            <TextArea label="Anwani ya Dharura" value={application.emergency_address} onChange={(v) => update("emergency_address", v)} />
+          </Section>
+
+          <Section title="9. TAMKO LA MWANACHAMA">
+            <DeclarationBlock
+              name={application.full_name}
+              date={formatDate(application.submitted_at || application.created_at)}
+              accepted={application.declaration_accepted}
+              onAcceptChange={(value) => update("declaration_accepted", value)}
+            />
+          </Section>
+        </>
+      )}
+
+      {errors.length > 0 && (
+        <div className="validation-errors">
+          {errors.map((error) => <p key={error}>{error}</p>)}
         </div>
-      </Section>
-
-      <Section title="1. TAARIFA BINAFSI ZA MWANACHAMA">
-        <div className="two-col">
-          <Field label="Jina Kamili" value={application.full_name} onChange={(v) => update("full_name", v)} required />
-          <Select
-            label="Jinsia"
-            value={application.gender}
-            onChange={(v) => update("gender", v)}
-            required
-            options={[
-              ["", ""],
-              ["Male", "Male"],
-              ["Female", "Female"],
-            ]}
-          />
-          <Field label="Tarehe ya Kuzaliwa" type="date" value={application.date_of_birth} onChange={(v) => update("date_of_birth", v)} />
-          <Field label="Umri" type="number" value={application.age || ""} onChange={(v) => update("age", v)} />
-          <Field label="Namba ya Simu" value={application.phone_number} onChange={(v) => update("phone_number", v)} required />
-          <Field label="Barua Pepe" type="email" value={application.email} onChange={(v) => update("email", v)} required />
-          <Field label="Namba ya NIDA" value={application.nida_number} onChange={(v) => update("nida_number", v)} required />
-          <Field label="Mkoa" value={application.region} onChange={(v) => update("region", v)} required />
-          <Field label="Wilaya" value={application.district} onChange={(v) => update("district", v)} required />
-          <Field label="Kazi / Profession" value={application.profession} onChange={(v) => update("profession", v)} required />
-          <Field label="Taasisi / Kampuni" value={application.institution} onChange={(v) => update("institution", v)} />
-          <Field label="Kiwango cha Elimu" value={application.education_level} onChange={(v) => update("education_level", v)} required />
-          <Field label="Uzoefu wa Kazi (Miaka)" type="number" value={application.work_experience_years || ""} onChange={(v) => update("work_experience_years", v)} />
-        </div>
-        <TextArea label="Anwani ya Makazi" value={application.residential_address} onChange={(v) => update("residential_address", v)} />
-      </Section>
-
-      <Section title="2. HALI YA NDOA">
-        <div className="three-col">
-          <Select label="Hali ya Ndoa" value={application.marital_status} onChange={(v) => update("marital_status", v)} options={[
-            ["single", "Mseja"],
-            ["married", "Nimeoa / Nimeolewa"],
-            ["widowed", "Mjane / Mgane"],
-            ["divorced", "Mtalaka"],
-          ]} />
-          <Field label="Jina la Mwenza" value={application.spouse_name} onChange={(v) => update("spouse_name", v)} />
-          <Field label="Simu ya Mwenza" value={application.spouse_phone} onChange={(v) => update("spouse_phone", v)} />
-        </div>
-      </Section>
-
-      <Section title="3. MAELEZO YA KUNDI LA MWANACHAMA">
-        <Segmented
-          label="Mwanachama yupo kundi gani?"
-          value={application.member_group}
-          onChange={(v) => update("member_group", v)}
-          options={[
-            ["youth", "Vijana 18-30"],
-            ["middle", "Rika la Kati 31-54"],
-            ["elder", "Wazee 55-100"],
-          ]}
-        />
-      </Section>
-
-      <Section title="4. TAARIFA ZA WAZAZI / WALEZI / WAKWE">
-        <Field label="Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya 04)" value={filledRowCount(application.parents)} onChange={() => {}} type="number" readOnly />
-        <GridRows
-          rows={application.parents}
-          columns={[
-            ["full_name", "Jina Kamili"],
-            ["relationship", "Uhusiano"],
-            ["phone_number", "Namba ya Simu"],
-          ]}
-          onChange={(i, field, value) => updateList("parents", i, field, value)}
-        />
-      </Section>
-
-      <Section title="5. TAARIFA ZA WATOTO (KWA WALIO NA WATOTO)">
-        <Field label="Idadi ya Watoto (Si zaidi ya wanne)" value={filledRowCount(application.children)} onChange={() => {}} type="number" readOnly />
-        <GridRows
-          rows={application.children}
-          columns={[
-            ["full_name", "Jina Kamili"],
-            ["gender", "Jinsia", "select", [
-              ["", ""],
-              ["Male", "Male"],
-              ["Female", "Female"],
-            ]],
-            ["age", "Umri"],
-            ["school_or_work", "Shule / Kazi"],
-          ]}
-          onChange={(i, field, value) => updateList("children", i, field, value)}
-        />
-      </Section>
-
-      <Section title="7. TAARIFA ZA DHARURA">
-        <div className="two-col">
-          <Field label="Jina la Mtu wa Dharura" value={application.emergency_name} onChange={(v) => update("emergency_name", v)} required />
-          <Field label="Uhusiano" value={application.emergency_relationship} onChange={(v) => update("emergency_relationship", v)} required />
-          <Field label="Namba ya Simu" value={application.emergency_phone} onChange={(v) => update("emergency_phone", v)} required />
-        </div>
-        <TextArea label="Anwani ya Dharura" value={application.emergency_address} onChange={(v) => update("emergency_address", v)} />
-      </Section>
-
-      <Section title="8. MAELEZO YA MWANACHAMA">
-        <TextArea label="Tukio la Harusi/Sendoff litamhusu nani?" value={application.wedding_sendoff_beneficiary} onChange={(v) => update("wedding_sendoff_beneficiary", v)} />
-        <ReadOnlyNames title="Majina ya wazazi/walezi waliotajwa hapo juu (Si zaidi ya wanne)" rows={application.parents} field="full_name" />
-        <Field label="Idadi ya watoto wa kutambulishwa (Si zaidi ya wanne 04)" value={filledRowCount(application.children)} onChange={() => {}} type="number" readOnly />
-        <ReadOnlyNames title="Majina ya watoto" rows={application.children} field="full_name" />
-      </Section>
-
-      <Section title="9. TAMKO LA MWANACHAMA">
-        <DeclarationBlock name={application.full_name} date={formatDate(application.submitted_at || application.created_at)} />
-      </Section>
-
+      )}
       {notice && <p className="notice">{notice}</p>}
+
       <div className="form-actions">
+        {step > 0 && <button type="button" onClick={goBack}>Back</button>}
         <button type="button" onClick={() => onSave(false)}>Save draft</button>
-        <button type="button" className="primary" onClick={() => onSave(true)}>Submit registration</button>
+        {step < FORM_STEPS.length - 1 ? (
+          <button type="button" className="primary" onClick={goNext}>Next</button>
+        ) : (
+          <button type="button" className="primary" onClick={submitRegistration}>Submit registration</button>
+        )}
       </div>
     </form>
   );
@@ -653,10 +709,6 @@ function AdminReview({ application, onReview, notice }) {
             ["divorced", "Mtalaka"],
           ]}
         />
-        <div className="detail-grid">
-          <Summary label="Jina la Mwenza (kama yupo)" value={application.spouse_name} />
-          <Summary label="Namba ya Simu ya Mwenza" value={application.spouse_phone} />
-        </div>
       </Section>
 
       <Section title="3. MAELEZO YA KUNDI LA MWANACHAMA">
@@ -672,7 +724,7 @@ function AdminReview({ application, onReview, notice }) {
       </Section>
 
       <Section title="4. TAARIFA ZA WAZAZI / WALEZI / WAKWE">
-        <Summary label="Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya 04)" value={filledRowCount(application.parents)} />
+        <Summary label="Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya 02)" value={filledRowCount(application.parents)} />
         <ReadonlyRows
           rows={application.parents}
           columns={[
@@ -691,6 +743,7 @@ function AdminReview({ application, onReview, notice }) {
           columns={[
             ["full_name", "Jina Kamili"],
             ["gender", "Jinsia"],
+            ["date_of_birth", "Tarehe ya Kuzaliwa"],
             ["age", "Umri"],
             ["school_or_work", "Shule / Kazi"],
           ]}
@@ -707,15 +760,8 @@ function AdminReview({ application, onReview, notice }) {
         </div>
       </Section>
 
-      <Section title="8. MAELEZO YA MWANACHAMA">
-        <Summary label="Tukio la Harusi/Sendoff litamhusu nani?" value={application.wedding_sendoff_beneficiary} />
-        <ReadOnlyNames title="Majina ya wazazi/walezi waliotajwa hapo juu (Si zaidi ya wanne)" rows={application.parents} field="full_name" />
-        <Summary label="Idadi ya watoto wa kutambulishwa (Si zaidi ya wanne 04)" value={filledRowCount(application.children)} />
-        <ReadOnlyNames title="Majina ya watoto" rows={application.children} field="full_name" />
-      </Section>
-
       <Section title="9. TAMKO LA MWANACHAMA">
-        <DeclarationBlock name={application.full_name} date={formatDate(application.submitted_at || application.created_at)} />
+        <DeclarationBlock name={application.full_name} date={formatDate(application.submitted_at || application.created_at)} readOnly accepted={application.declaration_accepted} />
       </Section>
 
       <Section title="10. MATUMIZI YA OFISI TU">
@@ -754,24 +800,37 @@ function ReadonlyRows({ rows, columns, emptyText }) {
       {visibleRows.map((row, index) => (
         <div className="readonly-row" key={index} style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}>
           <span>{index + 1}</span>
-          {columns.map(([field]) => <strong key={field}>{row[field] || ""}</strong>)}
+          {columns.map(([field]) => (
+            <strong key={field}>{field === "date_of_birth" ? formatDate(row[field]) : (row[field] || "")}</strong>
+          ))}
         </div>
       ))}
     </div>
   );
 }
 
-function DeclarationBlock({ name, date }) {
+function DeclarationBlock({ name, date, accepted = false, onAcceptChange, readOnly = false }) {
   return (
     <div className="declaration-block">
       <p>
         Mimi <span>{name || ""}</span> nakubali kujiunga na TMA Family na nitazingatia masharti, kanuni na taratibu
         zote za huduma.
       </p>
-      <div className="detail-grid">
-        <Summary label="Sahihi ya Mwanachama" value="" />
-        <Summary label="Tarehe" value={date} />
-      </div>
+      {readOnly ? (
+        <div className="detail-grid">
+          <Summary label="Tamko limekubaliwa" value={accepted ? "Ndiyo" : "Hapana"} />
+          <Summary label="Tarehe" value={date} />
+        </div>
+      ) : (
+        <label className="declaration-check">
+          <input
+            type="checkbox"
+            checked={Boolean(accepted)}
+            onChange={(event) => onAcceptChange(event.target.checked)}
+          />
+          <span>Nakubali tamko hili na ninathibitisha taarifa zote ni sahihi.</span>
+        </label>
+      )}
     </div>
   );
 }
@@ -867,17 +926,26 @@ function GridRows({ rows, columns, onChange }) {
       {rows.map((row, index) => (
         <div className="grid-row" key={index} style={{ gridTemplateColumns: `48px repeat(${columns.length}, 1fr)` }}>
           <span>{index + 1}</span>
-          {columns.map(([field, , type, options]) =>
-            type === "select" ? (
-              <select key={field} value={row[field] || ""} onChange={(event) => onChange(index, field, event.target.value)}>
-                {options.map(([optionValue, optionLabel]) => (
-                  <option key={optionValue} value={optionValue}>{optionLabel}</option>
-                ))}
-              </select>
-            ) : (
-              <input key={field} value={row[field] || ""} onChange={(event) => onChange(index, field, event.target.value)} />
-            ),
-          )}
+          {columns.map(([field, , type, options, readOnly]) => {
+            if (type === "select") {
+              return (
+                <select key={field} value={row[field] || ""} onChange={(event) => onChange(index, field, event.target.value)}>
+                  {options.map(([optionValue, optionLabel]) => (
+                    <option key={optionValue} value={optionValue}>{optionLabel}</option>
+                  ))}
+                </select>
+              );
+            }
+            return (
+              <input
+                key={field}
+                type={type || "text"}
+                value={row[field] || ""}
+                readOnly={Boolean(readOnly)}
+                onChange={(event) => onChange(index, field, event.target.value)}
+              />
+            );
+          })}
         </div>
       ))}
     </div>
@@ -897,6 +965,85 @@ function filledRowCount(rows) {
   return (Array.isArray(rows) ? rows : []).filter((row) =>
     Object.values(row || {}).some((value) => String(value || "").trim()),
   ).length;
+}
+
+function digitsOnly(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function isValidPhone(value) {
+  const digits = digitsOnly(value);
+  return digits.length >= 9 && digits.length <= 12;
+}
+
+function isValidNida(value) {
+  return digitsOnly(value).length === 20;
+}
+
+function ageFromBirthdate(value) {
+  if (!value) return "";
+  const birth = new Date(value);
+  if (Number.isNaN(birth.getTime())) return "";
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
+  return age >= 0 ? String(age) : "";
+}
+
+function validatePersonalStep(application) {
+  const errors = [];
+  if (!String(application.full_name || "").trim()) errors.push("Jina kamili linahitajika.");
+  if (!application.gender) errors.push("Jinsia inahitajika.");
+  if (!String(application.phone_number || "").trim()) errors.push("Namba ya simu inahitajika.");
+  else if (!isValidPhone(application.phone_number)) errors.push("Namba ya simu si sahihi.");
+  if (!String(application.email || "").trim()) errors.push("Barua pepe inahitajika.");
+  else if (!isValidEmail(application.email)) errors.push("Barua pepe si sahihi.");
+  if (!String(application.nida_number || "").trim()) errors.push("Namba ya NIDA inahitajika.");
+  else if (!isValidNida(application.nida_number)) errors.push("Namba ya NIDA lazima iwe na tarakimu 20.");
+  if (!String(application.residential_address || "").trim()) errors.push("Anwani ya makazi inahitajika.");
+  if (!String(application.region || "").trim()) errors.push("Mkoa unahitajika.");
+  if (!String(application.district || "").trim()) errors.push("Wilaya inahitajika.");
+  if (!String(application.profession || "").trim()) errors.push("Kazi/profession inahitajika.");
+  if (!String(application.education_level || "").trim()) errors.push("Kiwango cha elimu kinahitajika.");
+  return errors;
+}
+
+function validateFamilyStep(application) {
+  const errors = [];
+  const parentCount = filledRowCount(application.parents);
+  if (parentCount > 2) errors.push("Wazazi/walezi wasizidi wawili.");
+  return errors;
+}
+
+function validateFinishStep(application) {
+  const errors = [];
+  if (!String(application.emergency_name || "").trim()) errors.push("Jina la mtu wa dharura linahitajika.");
+  if (!String(application.emergency_relationship || "").trim()) errors.push("Uhusiano wa mtu wa dharura unahitajika.");
+  if (!String(application.emergency_phone || "").trim()) errors.push("Namba ya simu ya dharura inahitajika.");
+  else if (!isValidPhone(application.emergency_phone)) errors.push("Namba ya simu ya dharura si sahihi.");
+  if (!String(application.emergency_address || "").trim()) errors.push("Anwani ya dharura inahitajika.");
+  if (!application.declaration_accepted) errors.push("Lazima ukubali tamko la mwanachama kabla ya kuwasilisha.");
+  return errors;
+}
+
+function validateFormStep(step, application) {
+  if (step === 0) return validatePersonalStep(application);
+  if (step === 1) return validateFamilyStep(application);
+  if (step === 2) return validateFinishStep(application);
+  return [];
+}
+
+function validateFullForm(application) {
+  return [
+    ...validatePersonalStep(application),
+    ...validateFamilyStep(application),
+    ...validateFinishStep(application),
+  ];
 }
 
 function formatTZS(amount) {
