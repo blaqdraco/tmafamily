@@ -120,8 +120,11 @@ button {
 
 .auth-shell {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 32px;
   background: var(--gradient-hero);
   position: relative;
@@ -135,17 +138,33 @@ button {
   background: var(--auth-overlay);
 }
 
-.auth-theme-toggle {
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  z-index: 2;
+.auth-toolbar {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .auth-theme-toggle.icon-button {
+  width: 44px;
+  height: 44px;
   background: hsl(0 0% 100% / 0.14);
   color: var(--auth-text);
   border: 1px solid hsl(0 0% 100% / 0.22);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-soft);
+}
+
+[data-theme="dark"] .auth-theme-toggle.icon-button {
+  background: hsl(0 0% 100% / 0.08);
+  border-color: hsl(0 0% 100% / 0.16);
+}
+
+.auth-theme-toggle {
+  position: static;
 }
 
 .theme-toggle:hover,
@@ -171,6 +190,7 @@ button {
   gap: 40px;
   align-items: center;
   color: var(--auth-text);
+  margin: 0 auto;
 }
 
 .auth-panel h1,
@@ -352,6 +372,7 @@ textarea {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 18px;
+  flex-wrap: wrap;
 }
 
 .topbar h1 {
@@ -1297,6 +1318,11 @@ textarea {
 }
 
 @media (max-width: 900px) {
+  .auth-shell {
+    justify-content: flex-start;
+    padding: max(72px, calc(env(safe-area-inset-top, 0px) + 56px)) 16px 24px;
+  }
+
   .auth-panel,
   .workspace,
   .admin-layout,
@@ -1306,6 +1332,52 @@ textarea {
 
   .auth-panel {
     gap: 24px;
+  }
+
+  .auth-panel h1 {
+    font-size: clamp(28px, 8vw, 42px);
+  }
+
+  .lede {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .hero-logo {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 18px;
+  }
+
+  .auth-card {
+    padding: 22px 18px;
+  }
+
+  .app-shell {
+    padding: max(16px, env(safe-area-inset-top, 0px)) 16px 24px;
+  }
+
+  .topbar {
+    gap: 16px;
+  }
+
+  .topbar h1 {
+    font-size: clamp(24px, 6vw, 32px);
+  }
+
+  .brand-lockup {
+    width: 100%;
+  }
+
+  .brand-lockup img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .top-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
   }
 
   .workflow-timeline,
@@ -1331,6 +1403,27 @@ textarea {
     flex-direction: column;
   }
 
+  .status-panel,
+  .queue,
+  .review-panel,
+  .registration-form {
+    padding: 16px;
+  }
+
+  .document-header {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .document-header h2 {
+    font-size: clamp(24px, 6vw, 30px);
+  }
+
+  .form-actions button {
+    flex: 1 1 100%;
+  }
+
   .grid-row,
   .grid-row.header,
   .readonly-row,
@@ -1341,6 +1434,39 @@ textarea {
   .grid-row.header,
   .readonly-row.header {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-toolbar {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .auth-theme-toggle.icon-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .top-actions > span {
+    width: 100%;
+    font-size: 14px;
+  }
+
+  .staff-badge {
+    font-size: 12px;
+  }
+
+  .segmented {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tabs button {
+    width: 100%;
   }
 }
 

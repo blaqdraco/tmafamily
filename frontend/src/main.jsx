@@ -143,7 +143,9 @@ function App() {
   if (!user) {
     return (
       <main className="auth-shell">
-        <ThemeToggle className="auth-theme-toggle" />
+        <header className="auth-toolbar" aria-label="Page controls">
+          <ThemeToggle className="auth-theme-toggle" />
+        </header>
         <section className="auth-panel">
           <div>
             <img className="hero-logo" src={tmaLogo} alt="TMA Action logo" />
