@@ -612,6 +612,201 @@ textarea {
   margin-top: 2px;
 }
 
+.test-logins {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 8px;
+  color: white;
+  background: hsl(212 78% 20% / 0.45);
+  border: 1px solid hsl(0 0% 100% / 0.18);
+}
+
+.test-logins strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.test-logins p,
+.test-logins li {
+  margin: 0;
+  color: #dbe5ef;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.test-logins ul {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.test-logins li {
+  display: grid;
+  gap: 4px;
+}
+
+.test-logins code {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: hsl(0 0% 100% / 0.12);
+  color: white;
+  font-size: 12px;
+}
+
+.role-hero {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: white;
+  box-shadow: var(--shadow-soft);
+}
+
+.role-hero h2 {
+  margin: 0;
+}
+
+.role-hero p {
+  margin: 8px 0 0;
+  color: var(--muted-foreground);
+}
+
+.workflow-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workflow-step {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  text-align: center;
+}
+
+.workflow-step span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: white;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.workflow-step strong {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.workflow-step.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.workflow-step.done {
+  border-color: var(--success);
+  background: hsl(150 60% 40% / 0.12);
+}
+
+.payment-upload-card,
+.payment-review-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: hsl(210 60% 97%);
+}
+
+.payment-upload-card h3 {
+  margin: 0;
+}
+
+.upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: white;
+  background: var(--primary);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.upload-button input {
+  display: none;
+}
+
+.receipt-link {
+  color: var(--primary);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.staff-badge.role-communication {
+  background: hsl(198 82% 42% / 0.12);
+  color: hsl(198 82% 34%);
+}
+
+.staff-badge.role-hr {
+  background: hsl(212 78% 42% / 0.12);
+  color: hsl(212 78% 34%);
+}
+
+.staff-badge.role-finance {
+  background: hsl(45 95% 55% / 0.22);
+  color: hsl(35 80% 30%);
+}
+
+.staff-badge.role-admin,
+.role-hero.role-admin {
+  border-color: hsl(212 78% 42% / 0.25);
+}
+
+.role-communication .queue-item.active,
+.role-hero.role-communication {
+  border-color: hsl(198 82% 42% / 0.35);
+}
+
+.role-hr .queue-item.active,
+.role-hero.role-hr {
+  border-color: hsl(212 78% 42% / 0.35);
+}
+
+.role-finance .queue-item.active,
+.role-hero.role-finance {
+  border-color: hsl(45 95% 55% / 0.55);
+}
+
+.role-communication .queue-item.active {
+  background: hsl(198 82% 42%);
+}
+
+.role-hr .queue-item.active {
+  background: hsl(212 78% 42%);
+}
+
+.role-finance .queue-item.active {
+  background: hsl(40 90% 45%);
+  color: hsl(215 30% 12%);
+}
+
+.role-finance .queue-item.active small {
+  color: hsl(215 30% 12% / 0.75);
+}
+
 .admin-layout {
   display: grid;
   grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
@@ -630,7 +825,7 @@ textarea {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -926,6 +1121,7 @@ textarea {
     gap: 24px;
   }
 
+  .workflow-timeline,
   .form-steps {
     grid-template-columns: 1fr;
   }

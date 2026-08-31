@@ -85,7 +85,7 @@ async function getCurrentUser(token) {
 
   const user = await userResponse.json();
   const profileResponse = await fetch(
-    `${supabaseUrl}/rest/v1/profiles?select=is_admin&id=eq.${encodeURIComponent(user.id)}`,
+    `${supabaseUrl}/rest/v1/profiles?select=is_admin,role&id=eq.${encodeURIComponent(user.id)}`,
     {
       headers: {
         apikey: supabaseKey,
@@ -95,12 +95,15 @@ async function getCurrentUser(token) {
   );
 
   if (!profileResponse.ok) {
-    throw new Error("Unable to verify admin profile");
+    throw new Error("Unable to verify staff profile");
   }
 
   const profiles = await profileResponse.json();
-  if (!profiles[0]?.is_admin) {
-    throw new Error("Admin access is required");
+  const profile = profiles[0];
+  const role = profile?.role || (profile?.is_admin ? "admin" : "member");
+  const isStaff = profile?.is_admin || ["communication", "hr", "finance", "admin"].includes(role);
+  if (!isStaff) {
+    throw new Error("Staff access is required");
   }
 
   return user;

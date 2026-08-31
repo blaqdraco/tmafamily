@@ -6,9 +6,11 @@ Vercel-ready React registration portal for TMA Association / TMA Family, using S
 
 - Member account creation and login with Supabase Auth
 - Digital registration form based on the provided TMA Family membership form
-- Member status tracking: draft, pending review, approved, rejected, action required
-- Admin/staff request queue
-- Admin actions: approve, reject, request action, add office registration details and comments
+- Multi-step registration with Tanzania NIN validation
+- Workflow: Applicant → Communication → HR → Finance
+- Role-based staff portals for Communication, HR, Finance, and Admin
+- Payment receipt upload by members and finance verification
+- Member status tracking across workflow stages
 - TMA recruitment-site theme and logo
 
 ## Project structure
@@ -26,7 +28,10 @@ supabase/schema.sql Supabase tables, policies, trigger, and admin support
 
 ```text
 supabase/schema.sql
+supabase/workflow-migration.sql
 ```
+
+For existing projects, run `workflow-migration.sql` after `schema.sql`.
 
 4. Copy your Supabase Project URL and anon public key.
 5. Create `frontend/.env.local` from the example:
@@ -81,6 +86,36 @@ where id = (
 
 Change `admin@example.com` to the real admin email.
 
+## Workflow roles and test logins
+
+After running `workflow-migration.sql`, create these users in Supabase Auth and assign roles:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Communication | `communication@tmafamily.test` | `TmaTest@2026` |
+| HR | `hr@tmafamily.test` | `TmaTest@2026` |
+| Finance | `finance@tmafamily.test` | `TmaTest@2026` |
+| Admin | `admin@tmafamily.test` | `TmaTest@2026` |
+
+Then run:
+
+```sql
+update public.profiles set role = 'communication' where id = (select id from auth.users where email = 'communication@tmafamily.test');
+update public.profiles set role = 'hr' where id = (select id from auth.users where email = 'hr@tmafamily.test');
+update public.profiles set role = 'finance' where id = (select id from auth.users where email = 'finance@tmafamily.test');
+update public.profiles set role = 'admin', is_admin = true where id = (select id from auth.users where email = 'admin@tmafamily.test');
+```
+
+Workflow stages:
+
+1. Member submits → `pending_communication`
+2. Communication forwards → `pending_hr`
+3. HR forwards → `pending_finance`
+4. Member uploads payment receipt
+5. Finance verifies receipt → `approved`
+
+Create the `payment-receipts` storage bucket via `workflow-migration.sql`.
+
 ## Run locally
 
 ```bash
@@ -125,5 +160,6 @@ The SMTP variables are used by the Vercel `/api/send-action-email` function for 
 
 - Supabase Row Level Security is enabled.
 - Members can read and edit only their own applications.
-- Admin users are controlled by `public.profiles.is_admin`.
+- Staff roles are controlled by `public.profiles.role`.
+- Admin users can also use `public.profiles.is_admin`.
 - Parent/guardian/in-law and child rows are stored as JSON because the source form allows up to four simple repeatable entries.

@@ -12,15 +12,24 @@ import {
 } from "lucide-react";
 import {
   getCurrentUser,
+  getPaymentReceiptUrl,
   isSupabaseConfigured,
-  listAllApplications,
+  listApplicationsForRole,
   listMyApplications,
   loginUser,
   logoutUser,
   registerUser,
   reviewApplication,
   saveApplication,
+  uploadPaymentReceipt,
 } from "./api";
+import { ApplicationDetails, WorkflowTimeline } from "./ApplicationDetails";
+import {
+  ROLE_PORTALS,
+  ROLES,
+  TEST_LOGINS,
+  isValidTanzaniaNin,
+} from "./workflowConfig";
 import tmaLogo from "./assets-tma-association-logo.jpeg";
 import "./styles.css";
 
@@ -120,6 +129,7 @@ function App() {
             message={message}
             setMessage={setMessage}
           />
+          <TestLoginsPanel />
           {!isSupabaseConfigured && <SupabaseSetupNotice />}
         </section>
       </main>
@@ -133,11 +143,15 @@ function App() {
           <img src={tmaLogo} alt="TMA Action logo" />
           <div>
             <p className="eyebrow">TMA Family</p>
-            <h1>{user.is_staff ? "Admin Console" : "Registration Portal"}</h1>
+            <h1>{user.is_staff ? ROLE_PORTALS[user.role]?.title || "Staff Console" : "Registration Portal"}</h1>
           </div>
         </div>
         <div className="top-actions">
-          {user.is_staff && <span className="staff-badge">Admin</span>}
+          {user.is_staff && (
+            <span className={`staff-badge ${ROLE_PORTALS[user.role]?.themeClass || "role-admin"}`}>
+              {ROLE_PORTALS[user.role]?.badge || "Staff"}
+            </span>
+          )}
           <span>{user.username}</span>
           <button className="icon-button" onClick={logout} title="Log out">
             <LogOut size={18} />
@@ -203,20 +217,37 @@ function SupabaseSetupNotice() {
   );
 }
 
+function TestLoginsPanel() {
+  return (
+    <div className="test-logins">
+      <strong>Test staff logins</strong>
+      <p>Create these users in Supabase Auth, run `workflow-migration.sql`, then assign roles.</p>
+      <ul>
+        {TEST_LOGINS.map((item) => (
+          <li key={item.email}>
+            <span>{item.role}</span>
+            <code>{item.email}</code>
+            <code>{item.password}</code>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Dashboard({ user }) {
   if (user.is_staff) {
-    return <AdminArea />;
+    return <StaffWorkflowArea user={user} />;
   }
 
-  return (
-    <MemberArea />
-  );
+  return <MemberArea />;
 }
 
 function MemberArea() {
   const [applications, setApplications] = useState([]);
   const [active, setActive] = useState(emptyApplication);
   const [notice, setNotice] = useState("");
+  const [receiptPreview, setReceiptPreview] = useState("");
 
   useEffect(() => {
     load();
@@ -225,7 +256,16 @@ function MemberArea() {
   async function load() {
     const data = await listMyApplications();
     setApplications(data);
-    if (data[0]) setActive(normalizeApplication(data[0]));
+    if (data[0]) {
+      const normalized = normalizeApplication(data[0]);
+      setActive(normalized);
+      if (normalized.payment_receipt_path) {
+        const url = await getPaymentReceiptUrl(normalized.payment_receipt_path);
+        setReceiptPreview(url);
+      } else {
+        setReceiptPreview("");
+      }
+    }
   }
 
   async function save(submit = false) {
@@ -234,19 +274,43 @@ function MemberArea() {
       const data = await saveApplication(active, submit);
       setActive(normalizeApplication(data));
       await load();
-      setNotice(submit ? "Registration submitted for office review." : "Draft saved.");
+      setNotice(submit ? "Registration submitted to Communication for review." : "Draft saved.");
+    } catch (error) {
+      setNotice(error.message);
+    }
+  }
+
+  async function uploadReceipt(file) {
+    if (!active.id) {
+      setNotice("Save your registration draft before uploading a payment receipt.");
+      return;
+    }
+    setNotice("");
+    try {
+      const data = await uploadPaymentReceipt(active.id, file);
+      setActive(normalizeApplication(data));
+      await load();
+      setNotice("Payment receipt uploaded successfully.");
     } catch (error) {
       setNotice(error.message);
     }
   }
 
   const latest = applications[0];
+  const canUploadReceipt = latest && ["pending_hr", "pending_finance", "action_required"].includes(latest.status);
 
   return (
     <section className="workspace">
       <aside className="status-panel">
         <h2>Registration status</h2>
-        {latest ? <StatusCard application={latest} /> : <p>No registration has been started yet.</p>}
+        {latest ? (
+          <>
+            <StatusCard application={latest} />
+            <WorkflowTimeline status={latest.status} />
+          </>
+        ) : (
+          <p>No registration has been started yet.</p>
+        )}
         <div className="info-list">
           <p>Initial contribution: TZS 200,000 (Mkoba)</p>
           <p>Event contribution: TZS 100,000</p>
@@ -255,6 +319,33 @@ function MemberArea() {
           <p>Payment methods: Mkoba / CRDB</p>
           <p>Contact: 0764223041</p>
         </div>
+        {canUploadReceipt && (
+          <div className="payment-upload-card">
+            <h3>Payment receipt</h3>
+            <p>Upload proof of payment after paying the initial contribution.</p>
+            <label className="upload-button">
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) uploadReceipt(file);
+                  event.target.value = "";
+                }}
+              />
+              Upload receipt
+            </label>
+            {latest.payment_receipt_uploaded_at && (
+              <p className="muted">Uploaded: {formatDate(latest.payment_receipt_uploaded_at)}</p>
+            )}
+            {latest.payment_verified && <p className="notice">Payment verified by Finance.</p>}
+            {receiptPreview && (
+              <a className="receipt-link" href={receiptPreview} target="_blank" rel="noreferrer">
+                View uploaded receipt
+              </a>
+            )}
+          </div>
+        )}
       </aside>
       <ApplicationForm application={active} setApplication={setActive} onSave={save} notice={notice} />
     </section>
@@ -264,6 +355,9 @@ function MemberArea() {
 function StatusCard({ application }) {
   const icons = {
     pending: <Clock3 size={20} />,
+    pending_communication: <Clock3 size={20} />,
+    pending_hr: <Clock3 size={20} />,
+    pending_finance: <Clock3 size={20} />,
     approved: <CheckCircle2 size={20} />,
     rejected: <XCircle size={20} />,
     action_required: <FilePenLine size={20} />,
@@ -335,7 +429,6 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
               <Summary label="Namba ya Usajili" value="" />
               <Summary label="Tarehe ya Kupokea Fomu" value="" />
               <Summary label="Imepokelewa na" value="" />
-              <Summary label="Sahihi" value="" />
             </div>
           </Section>
 
@@ -526,18 +619,19 @@ function GuideList({ title, items }) {
   );
 }
 
-function AdminArea() {
+function StaffWorkflowArea({ user }) {
+  const portal = ROLE_PORTALS[user.role] || ROLE_PORTALS.admin;
   const [applications, setApplications] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(user.role === ROLES.ADMIN ? "all" : portal.queueStatus);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
     load();
-  }, []);
+  }, [user.role]);
 
   async function load() {
-    const data = await listAllApplications();
+    const data = await listApplicationsForRole(user.role);
     setApplications(data);
     setSelected((current) => {
       if (!current) return data[0] || null;
@@ -547,10 +641,14 @@ function AdminArea() {
 
   async function review(action, fields) {
     setNotice("");
-    const data = await reviewApplication(selected.id, action, fields);
-    setSelected(data);
-    await load();
-    setNotice(data.email_warning || "Registration status updated and notification email sent.");
+    try {
+      const data = await reviewApplication(selected.id, action, fields, user.role);
+      setSelected(data);
+      await load();
+      setNotice(data.email_warning || "Application updated in the workflow.");
+    } catch (error) {
+      setNotice(error.message);
+    }
   }
 
   function changeFilter(nextFilter) {
@@ -560,23 +658,36 @@ function AdminArea() {
   }
 
   const filteredApplications = applications.filter((item) => filter === "all" || item.status === filter);
+  const filters = user.role === ROLES.ADMIN
+    ? [
+        ["all", "All"],
+        ["pending_communication", "Communication"],
+        ["pending_hr", "HR"],
+        ["pending_finance", "Finance"],
+        ["approved", "Approved"],
+        ["action_required", "Action"],
+        ["rejected", "Rejected"],
+      ]
+    : [["all", "My queue"], [portal.queueStatus, "Awaiting me"]];
 
   return (
-    <section className="admin-dashboard">
+    <section className={`admin-dashboard ${portal.themeClass}`}>
+      <div className={`role-hero ${portal.themeClass}`}>
+        <div>
+          <p className="eyebrow">{portal.badge}</p>
+          <h2>{portal.title}</h2>
+          <p>{portal.description}</p>
+        </div>
+        <WorkflowTimeline status={selected?.status || portal.queueStatus || "pending_communication"} />
+      </div>
       <AdminStats applications={applications} />
       <div className="admin-layout">
         <div className="queue">
           <div className="queue-heading">
-            <h2>Registered clients: {filteredApplications.length}</h2>
+            <h2>Applications: {filteredApplications.length}</h2>
           </div>
           <div className="filter-row">
-            {[
-              ["all", "All"],
-              ["pending", "Pending"],
-              ["approved", "Approved"],
-              ["action_required", "Action"],
-              ["rejected", "Rejected"],
-            ].map(([value, label]) => (
+            {filters.map(([value, label]) => (
               <button key={value} className={filter === value ? "active" : ""} onClick={() => changeFilter(value)}>
                 {label}
               </button>
@@ -589,9 +700,13 @@ function AdminArea() {
               <small>{item.phone_number || item.email || "No contact provided"}</small>
             </button>
           ))}
-          {!filteredApplications.length && <p className="muted">No clients in this view.</p>}
+          {!filteredApplications.length && <p className="muted">No applications in this view.</p>}
         </div>
-        {selected ? <AdminReview application={selected} onReview={review} notice={notice} /> : <p>No requests found.</p>}
+        {selected ? (
+          <WorkflowReview application={selected} user={user} onReview={review} notice={notice} />
+        ) : (
+          <p>No applications found.</p>
+        )}
       </div>
     </section>
   );
@@ -604,14 +719,16 @@ function AdminStats({ applications }) {
       total.all += 1;
       return total;
     },
-    { all: 0, pending: 0, approved: 0, action_required: 0, rejected: 0, draft: 0 },
+    { all: 0, pending: 0, pending_communication: 0, pending_hr: 0, pending_finance: 0, approved: 0, action_required: 0, rejected: 0, draft: 0 },
   );
   const approvedAmount = counts.approved * 200000;
 
   return (
     <div className="stats-grid">
       <StatCard icon={<ClipboardList size={22} />} label="Total registered" value={counts.all} />
-      <StatCard icon={<Clock3 size={22} />} label="Pending review" value={counts.pending} />
+      <StatCard icon={<Clock3 size={22} />} label="At communication" value={counts.pending_communication + counts.pending} />
+      <StatCard icon={<Clock3 size={22} />} label="At HR" value={counts.pending_hr} />
+      <StatCard icon={<Clock3 size={22} />} label="At finance" value={counts.pending_finance} />
       <StatCard icon={<CheckCircle2 size={22} />} label="Approved clients" value={counts.approved} />
       <StatCard icon={<FilePenLine size={22} />} label="Action required" value={counts.action_required} />
       <StatCard icon={<XCircle size={22} />} label="Rejected" value={counts.rejected} />
@@ -632,14 +749,19 @@ function StatCard({ icon, label, value }) {
   );
 }
 
-function AdminReview({ application, onReview, notice }) {
+function WorkflowReview({ application, user, onReview, notice }) {
+  const portal = ROLE_PORTALS[user.role] || ROLE_PORTALS.admin;
   const [fields, setFields] = useState({
     office_registration_number: application.office_registration_number || "",
     office_received_by: application.office_received_by || "",
     office_received_at: application.office_received_at || "",
     office_comments: application.office_comments || "",
     action_required_note: application.action_required_note || "",
+    communication_notes: application.communication_notes || "",
+    hr_notes: application.hr_notes || "",
+    finance_notes: application.finance_notes || "",
   });
+  const [receiptUrl, setReceiptUrl] = useState("");
 
   useEffect(() => {
     setFields({
@@ -648,14 +770,36 @@ function AdminReview({ application, onReview, notice }) {
       office_received_at: application.office_received_at || "",
       office_comments: application.office_comments || "",
       action_required_note: application.action_required_note || "",
+      communication_notes: application.communication_notes || "",
+      hr_notes: application.hr_notes || "",
+      finance_notes: application.finance_notes || "",
     });
   }, [application.id]);
 
+  useEffect(() => {
+    let active = true;
+    if (application.payment_receipt_path) {
+      getPaymentReceiptUrl(application.payment_receipt_path).then((url) => {
+        if (active) setReceiptUrl(url);
+      });
+    } else {
+      setReceiptUrl("");
+    }
+    return () => {
+      active = false;
+    };
+  }, [application.payment_receipt_path]);
+
   const set = (name, value) => setFields({ ...fields, [name]: value });
-  const location = [application.region, application.district].filter(Boolean).join(", ");
+  const notesField = user.role === ROLES.ADMIN
+    ? (ROLE_PORTALS[application.status === "pending_communication" ? "communication" : application.status === "pending_hr" ? "hr" : application.status === "pending_finance" ? "finance" : "admin"] || portal).notesField
+    : portal.notesField;
+  const canAct = user.role === ROLES.ADMIN
+    ? !["approved", "rejected", "draft"].includes(application.status)
+    : application.status === portal.queueStatus;
 
   return (
-    <article className="review-panel">
+    <article className={`review-panel ${portal.themeClass}`}>
       <div className="review-header">
         <div>
           <p className="eyebrow">Application #{application.id}</p>
@@ -668,6 +812,8 @@ function AdminReview({ application, onReview, notice }) {
           <StatusCard application={application} />
         </div>
       </div>
+
+      <WorkflowTimeline status={application.status} />
       <DocumentHeader subtitle="SEHEMU YA PILI: FOMU YA USAJILI WA MWANACHAMA" />
 
       <Section title="TAARIFA ZA OFISI">
@@ -676,110 +822,46 @@ function AdminReview({ application, onReview, notice }) {
           <Field label="Tarehe ya Kupokea Fomu" type="date" value={fields.office_received_at} onChange={(v) => set("office_received_at", v)} />
           <Field label="Imepokelewa na" value={fields.office_received_by} onChange={(v) => set("office_received_by", v)} />
         </div>
-        <div className="office-placeholder-grid">
-          <Summary label="Sahihi" value="" />
-        </div>
       </Section>
 
-      <Section title="1. TAARIFA BINAFSI ZA MWANACHAMA">
-        <div className="detail-grid">
-          <Summary label="Jina Kamili" value={application.full_name} />
-          <Summary label="Jinsia" value={application.gender} />
-          <Summary label="Tarehe ya Kuzaliwa" value={formatDate(application.date_of_birth)} />
-          <Summary label="Umri" value={application.age} />
-          <Summary label="Namba ya Simu" value={application.phone_number} />
-          <Summary label="Barua Pepe" value={application.email} />
-          <Summary label="Namba ya NIDA" value={application.nida_number} />
-          <Summary label="Anwani ya Makazi" value={application.residential_address} />
-          <Summary label="Mkoa / Wilaya" value={location} />
-          <Summary label="Kazi / Profession" value={application.profession} />
-          <Summary label="Taasisi / Kampuni" value={application.institution} />
-          <Summary label="Kiwango cha Elimu" value={application.education_level} />
-          <Summary label="Uzoefu wa Kazi (Miaka)" value={application.work_experience_years} />
-        </div>
-      </Section>
+      {(user.role === ROLES.FINANCE || user.role === ROLES.ADMIN) && (
+        <Section title="MALIPO / PAYMENT RECEIPT">
+          <div className="payment-review-card">
+            <Summary label="Receipt uploaded" value={application.payment_receipt_uploaded_at ? formatDate(application.payment_receipt_uploaded_at) : "Not uploaded"} />
+            <Summary label="Payment verified" value={application.payment_verified ? "Yes" : "No"} />
+            {receiptUrl ? (
+              <a className="receipt-link" href={receiptUrl} target="_blank" rel="noreferrer">
+                Open payment receipt proof
+              </a>
+            ) : (
+              <p className="muted">No payment receipt uploaded yet.</p>
+            )}
+          </div>
+        </Section>
+      )}
 
-      <Section title="2. HALI YA NDOA">
-        <CheckOptions
-          value={application.marital_status}
-          options={[
-            ["single", "Mseja"],
-            ["married", "Nimeoa / Nimeolewa"],
-            ["widowed", "Mjane / Mgane"],
-            ["divorced", "Mtalaka"],
-          ]}
-        />
-      </Section>
+      <ApplicationDetails application={application} />
 
-      <Section title="3. MAELEZO YA KUNDI LA MWANACHAMA">
-        <p className="section-note">Mwanachama yupo kundi gani? Weka alama ya vema kwenye kundi lako.</p>
-        <CheckOptions
-          value={application.member_group}
-          options={[
-            ["youth", "Vijana (Miaka 18 - 30)"],
-            ["middle", "Rika la Kati (Miaka 31 - 54)"],
-            ["elder", "Wazee (Miaka 55 - 100)"],
-          ]}
-        />
-      </Section>
-
-      <Section title="4. TAARIFA ZA WAZAZI / WALEZI / WAKWE">
-        <Summary label="Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya 02)" value={filledRowCount(application.parents)} />
-        <ReadonlyRows
-          rows={application.parents}
-          columns={[
-            ["full_name", "Jina Kamili"],
-            ["relationship", "Uhusiano"],
-            ["phone_number", "Namba ya Simu"],
-          ]}
-          emptyText="No parent, guardian, or in-law details were provided."
-        />
-      </Section>
-
-      <Section title="5. TAARIFA ZA WATOTO (KWA WALIO NA WATOTO)">
-        <Summary label="Idadi ya Watoto (Si zaidi ya wanne)" value={filledRowCount(application.children)} />
-        <ReadonlyRows
-          rows={application.children}
-          columns={[
-            ["full_name", "Jina Kamili"],
-            ["gender", "Jinsia"],
-            ["date_of_birth", "Tarehe ya Kuzaliwa"],
-            ["age", "Umri"],
-            ["school_or_work", "Shule / Kazi"],
-          ]}
-          emptyText="No children details were provided."
-        />
-      </Section>
-
-      <Section title="7. TAARIFA ZA DHARURA">
-        <div className="detail-grid">
-          <Summary label="Jina la Mtu wa Dharura" value={application.emergency_name} />
-          <Summary label="Uhusiano" value={application.emergency_relationship} />
-          <Summary label="Namba ya Simu" value={application.emergency_phone} />
-          <Summary label="Anwani" value={application.emergency_address} />
-        </div>
-      </Section>
-
-      <Section title="9. TAMKO LA MWANACHAMA">
-        <DeclarationBlock name={application.full_name} date={formatDate(application.submitted_at || application.created_at)} readOnly accepted={application.declaration_accepted} />
-      </Section>
-
-      <Section title="10. MATUMIZI YA OFISI TU">
-        <div className="detail-grid">
-          <Summary label="Fomu imehakikiwa na" value="" />
-          <Summary label="Cheo" value="" />
-          <Summary label="Sahihi" value="" />
-          <Summary label="Tarehe" value={formatDate(fields.office_received_at)} />
-        </div>
-        <TextArea label="Maoni ya Ofisi" value={fields.office_comments} onChange={(v) => set("office_comments", v)} />
-        <TextArea label="Action required note" value={fields.action_required_note} onChange={(v) => set("action_required_note", v)} />
-        <div className="form-actions">
-          <button type="button" onClick={() => onReview("request_action", fields)}>Request action</button>
-          <button type="button" onClick={() => onReview("reject", fields)}>Reject</button>
-          <button type="button" className="primary" onClick={() => onReview("approve", fields)}>Approve</button>
-        </div>
-        {notice && <p className={notice.includes("not sent") ? "error" : "notice"}>{notice}</p>}
-      </Section>
+      {canAct && (
+        <Section title={`${portal.badge} review`}>
+          <TextArea label={`${portal.badge} notes`} value={fields[notesField]} onChange={(v) => set(notesField, v)} />
+          <TextArea label="Action required note" value={fields.action_required_note} onChange={(v) => set("action_required_note", v)} />
+          <div className="form-actions">
+            <button type="button" onClick={() => onReview("request_action", fields)}>Request action</button>
+            <button type="button" onClick={() => onReview("reject", fields)}>Reject</button>
+            {user.role === ROLES.FINANCE || (user.role === ROLES.ADMIN && application.status === "pending_finance") ? (
+              <button type="button" className="primary" onClick={() => onReview("forward", fields)}>
+                Verify payment & approve
+              </button>
+            ) : (
+              <button type="button" className="primary" onClick={() => onReview("forward", fields)}>
+                {portal.forwardLabel}
+              </button>
+            )}
+          </div>
+          {notice && <p className={notice.includes("not sent") ? "error" : "notice"}>{notice}</p>}
+        </Section>
+      )}
     </article>
   );
 }
@@ -981,7 +1063,7 @@ function isValidPhone(value) {
 }
 
 function isValidNida(value) {
-  return digitsOnly(value).length === 20;
+  return isValidTanzaniaNin(value);
 }
 
 function ageFromBirthdate(value) {
@@ -1004,7 +1086,7 @@ function validatePersonalStep(application) {
   if (!String(application.email || "").trim()) errors.push("Barua pepe inahitajika.");
   else if (!isValidEmail(application.email)) errors.push("Barua pepe si sahihi.");
   if (!String(application.nida_number || "").trim()) errors.push("Namba ya NIDA inahitajika.");
-  else if (!isValidNida(application.nida_number)) errors.push("Namba ya NIDA lazima iwe na tarakimu 20.");
+  else if (!isValidNida(application.nida_number)) errors.push("Namba ya NIDA lazima iwe na tarakimu 20 za Tanzania NIN (mfano: YYYYMMDD-XXXXX-XXXXX-XX).");
   if (!String(application.residential_address || "").trim()) errors.push("Anwani ya makazi inahitajika.");
   if (!String(application.region || "").trim()) errors.push("Mkoa unahitajika.");
   if (!String(application.district || "").trim()) errors.push("Wilaya inahitajika.");
