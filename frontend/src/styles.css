@@ -1,9 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap");
 
-:root {
+:root,
+[data-theme="light"] {
+  color-scheme: light;
   --background: hsl(210 60% 97%);
   --foreground: hsl(215 30% 12%);
   --card: #ffffff;
+  --input-bg: #ffffff;
   --primary: hsl(212 78% 42%);
   --primary-strong: hsl(212 82% 34%);
   --primary-soft: hsl(212 78% 42% / 0.1);
@@ -15,21 +18,92 @@
   --success: hsl(150 60% 40%);
   --warning: hsl(45 95% 55%);
   --danger: hsl(0 72% 51%);
+  --text-soft: hsl(215 28% 26%);
   --gradient-hero: linear-gradient(135deg, hsl(212 78% 42%) 0%, hsl(207 80% 55%) 50%, hsl(45 95% 55%) 100%);
   --gradient-gold: linear-gradient(135deg, hsl(45 95% 55%) 0%, hsl(40 90% 50%) 100%);
   --shadow-soft: 0 4px 20px -4px hsl(212 78% 42% / 0.15);
   --shadow-elevated: 0 8px 30px -8px hsl(212 78% 42% / 0.25);
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --auth-overlay: linear-gradient(120deg, hsl(212 78% 20% / 0.2), hsl(45 95% 35% / 0.18)),
+    radial-gradient(circle at 15% 20%, hsl(0 0% 100% / 0.22), transparent 26rem);
+  --auth-text: #ffffff;
+  --auth-lede: #dbe5ef;
+  --document-border: hsl(215 30% 12%);
+  --status-draft-bg: hsl(45 95% 55% / 0.14);
+  --status-pending-bg: hsl(212 78% 42% / 0.1);
+  --status-approved-bg: hsl(150 60% 40% / 0.1);
+  --status-rejected-bg: hsl(0 72% 51% / 0.1);
+  --status-action-bg: hsl(45 95% 55% / 0.18);
+  --payment-panel-bg: hsl(210 60% 97%);
+  --on-primary: #ffffff;
+  --on-primary-muted: hsl(0 0% 100% / 0.82);
+  --focus-ring: hsl(212 78% 42% / 0.18);
+  --primary-border: hsl(212 78% 42% / 0.22);
+  --hero-logo-shadow: 0 18px 48px hsl(215 30% 12% / 0.28);
+  --tab-active-color: hsl(212 78% 42%);
+  --success-soft-bg: hsl(150 60% 40% / 0.12);
+  --danger-soft-bg: hsl(0 72% 51% / 0.08);
+  --danger-soft-border: hsl(0 72% 51% / 0.25);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: hsl(222 24% 7%);
+  --foreground: hsl(210 30% 96%);
+  --card: hsl(222 20% 11%);
+  --input-bg: hsl(222 18% 14%);
+  --primary: hsl(212 85% 62%);
+  --primary-strong: hsl(212 90% 72%);
+  --primary-soft: hsl(212 85% 62% / 0.16);
+  --secondary: hsl(45 95% 58%);
+  --secondary-strong: hsl(45 95% 65%);
+  --muted: hsl(222 16% 16%);
+  --muted-foreground: hsl(215 15% 72%);
+  --border: hsl(222 14% 22%);
+  --success: hsl(150 55% 48%);
+  --warning: hsl(45 95% 58%);
+  --danger: hsl(0 72% 58%);
+  --text-soft: hsl(215 18% 78%);
+  --gradient-hero: linear-gradient(135deg, hsl(222 28% 8%) 0%, hsl(212 45% 18%) 52%, hsl(222 24% 10%) 100%);
+  --gradient-gold: linear-gradient(135deg, hsl(45 95% 55%) 0%, hsl(40 90% 50%) 100%);
+  --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.45);
+  --shadow-elevated: 0 8px 30px -8px hsl(0 0% 0% / 0.55);
+  --auth-overlay: linear-gradient(120deg, hsl(0 0% 0% / 0.35), hsl(212 60% 20% / 0.25)),
+    radial-gradient(circle at 15% 20%, hsl(212 85% 62% / 0.08), transparent 26rem);
+  --auth-text: hsl(210 30% 96%);
+  --auth-lede: hsl(215 18% 78%);
+  --document-border: hsl(215 15% 72%);
+  --status-draft-bg: hsl(45 95% 55% / 0.12);
+  --status-pending-bg: hsl(212 85% 62% / 0.14);
+  --status-approved-bg: hsl(150 55% 48% / 0.14);
+  --status-rejected-bg: hsl(0 72% 58% / 0.14);
+  --status-action-bg: hsl(45 95% 58% / 0.14);
+  --payment-panel-bg: hsl(222 18% 13%);
+  --on-primary: #ffffff;
+  --on-primary-muted: hsl(0 0% 100% / 0.82);
+  --focus-ring: hsl(212 85% 62% / 0.22);
+  --primary-border: hsl(212 85% 62% / 0.28);
+  --hero-logo-shadow: 0 18px 48px hsl(0 0% 0% / 0.45);
+  --tab-active-color: hsl(212 85% 72%);
+  --success-soft-bg: hsl(150 55% 48% / 0.14);
+  --danger-soft-bg: hsl(0 72% 58% / 0.12);
+  --danger-soft-border: hsl(0 72% 58% / 0.28);
 }
 
 * {
   box-sizing: border-box;
 }
 
+:root {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 body {
   margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 button,
@@ -58,9 +132,32 @@ button {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(120deg, hsl(212 78% 20% / 0.2), hsl(45 95% 35% / 0.18)),
-    radial-gradient(circle at 15% 20%, hsl(0 0% 100% / 0.22), transparent 26rem);
+  background: var(--auth-overlay);
+}
+
+.auth-theme-toggle {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 2;
+}
+
+.auth-theme-toggle.icon-button {
+  background: hsl(0 0% 100% / 0.14);
+  color: var(--auth-text);
+  border: 1px solid hsl(0 0% 100% / 0.22);
+}
+
+.theme-toggle:hover,
+.icon-button:hover {
+  filter: brightness(1.05);
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .auth-shell > * {
@@ -73,7 +170,7 @@ button {
   grid-template-columns: 1fr 430px;
   gap: 40px;
   align-items: center;
-  color: white;
+  color: var(--auth-text);
 }
 
 .auth-panel h1,
@@ -88,7 +185,7 @@ button {
 
 .lede {
   max-width: 640px;
-  color: #dbe5ef;
+  color: var(--auth-lede);
   font-size: 18px;
   line-height: 1.7;
 }
@@ -108,7 +205,7 @@ button {
   object-fit: contain;
   margin-bottom: 24px;
   border-radius: 999px;
-  box-shadow: 0 18px 48px hsl(215 30% 12% / 0.28);
+  box-shadow: var(--hero-logo-shadow);
 }
 
 .brand-lockup {
@@ -130,7 +227,7 @@ button {
 .registration-form,
 .queue,
 .review-panel {
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: var(--shadow-elevated);
@@ -178,13 +275,13 @@ textarea {
   border-radius: 6px;
   padding: 11px 12px;
   color: var(--foreground);
-  background: white;
+  background: var(--input-bg);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 3px solid hsl(212 78% 42% / 0.18);
+  outline: 3px solid var(--focus-ring);
   border-color: var(--primary);
 }
 
@@ -195,7 +292,7 @@ textarea {
 
 .primary {
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
 }
 
 .auth-card .primary,
@@ -228,8 +325,8 @@ textarea {
 .setup-notice {
   padding: 16px;
   border-radius: 8px;
-  color: hsl(215 30% 12%);
-  background: hsl(45 95% 55% / 0.92);
+  color: var(--foreground);
+  background: var(--card);
   box-shadow: var(--shadow-elevated);
 }
 
@@ -280,7 +377,7 @@ textarea {
 }
 
 .icon-button.active {
-  color: white;
+  color: var(--on-primary);
   background: var(--primary);
 }
 
@@ -289,7 +386,7 @@ textarea {
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: white;
+  background: var(--card);
   box-shadow: var(--shadow-elevated);
 }
 
@@ -348,7 +445,7 @@ textarea {
 }
 
 .tabs button.active {
-  color: hsl(212 78% 42%);
+  color: var(--tab-active-color);
   background: var(--secondary);
 }
 
@@ -372,9 +469,9 @@ textarea {
   gap: 18px;
   margin-bottom: 18px;
   padding: 18px;
-  border: 2px solid hsl(215 30% 12%);
+  border: 2px solid var(--document-border);
   border-radius: 8px;
-  background: white;
+  background: var(--card);
 }
 
 .document-header img {
@@ -403,7 +500,7 @@ textarea {
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: hsl(0 0% 100%);
+  background: var(--card);
 }
 
 .guide-card h2,
@@ -415,7 +512,7 @@ textarea {
 .guide-card p,
 .guide-card li,
 .section-note {
-  color: hsl(215 28% 26%);
+  color: var(--text-soft);
   line-height: 1.6;
 }
 
@@ -440,7 +537,7 @@ textarea {
   margin-bottom: 0;
   padding: 12px;
   border-left: 4px solid var(--secondary);
-  background: hsl(45 95% 55% / 0.14);
+  background: var(--status-action-bg);
   font-weight: 800;
 }
 
@@ -449,7 +546,7 @@ textarea {
   padding: 14px;
   border-radius: 8px;
   background: var(--primary-soft);
-  border: 1px solid hsl(212 78% 42% / 0.22);
+  border: 1px solid var(--primary-border);
 }
 
 .status-card strong,
@@ -463,15 +560,15 @@ textarea {
 }
 
 .status-card.approved {
-  background: hsl(150 60% 40% / 0.1);
+  background: var(--status-approved-bg);
 }
 
 .status-card.rejected {
-  background: hsl(0 72% 51% / 0.1);
+  background: var(--status-rejected-bg);
 }
 
 .status-card.action_required {
-  background: hsl(45 95% 55% / 0.18);
+  background: var(--status-action-bg);
 }
 
 .info-list p {
@@ -556,7 +653,7 @@ textarea {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  color: hsl(215 28% 26%);
+  color: var(--text-soft);
   font-weight: 700;
 }
 
@@ -578,7 +675,7 @@ textarea {
 }
 
 .form-actions .primary {
-  color: white;
+  color: var(--on-primary);
   background: var(--primary);
 }
 
@@ -596,7 +693,7 @@ textarea {
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: white;
+  background: var(--card);
 }
 
 .form-step span {
@@ -622,20 +719,20 @@ textarea {
 
 .form-step.active span {
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
 }
 
 .form-step.done span {
   background: var(--success);
-  color: white;
+  color: var(--on-primary);
 }
 
 .validation-errors {
   margin: 0 0 14px;
   padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid hsl(0 72% 51% / 0.25);
-  background: hsl(0 72% 51% / 0.08);
+  border: 1px solid var(--danger-soft-border);
+  background: var(--danger-soft-bg);
 }
 
 .validation-errors p {
@@ -672,7 +769,7 @@ textarea {
   padding: 20px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--card);
   box-shadow: var(--shadow-soft);
 }
 
@@ -708,7 +805,7 @@ textarea {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: white;
+  background: var(--card);
   font-size: 12px;
   font-weight: 800;
 }
@@ -725,7 +822,7 @@ textarea {
 
 .workflow-step.done {
   border-color: var(--success);
-  background: hsl(150 60% 40% / 0.12);
+  background: var(--success-soft-bg);
 }
 
 .payment-upload-card,
@@ -735,7 +832,7 @@ textarea {
   padding: 14px;
   border: 1px dashed var(--border);
   border-radius: 8px;
-  background: hsl(210 60% 97%);
+  background: var(--payment-panel-bg);
 }
 
 .payment-upload-card h3 {
@@ -749,7 +846,7 @@ textarea {
   min-height: 42px;
   padding: 10px 14px;
   border-radius: 6px;
-  color: white;
+  color: var(--on-primary);
   background: var(--primary);
   font-weight: 800;
   cursor: pointer;
@@ -810,11 +907,11 @@ textarea {
 
 .role-finance .queue-item.active {
   background: hsl(40 90% 45%);
-  color: hsl(215 30% 12%);
+  color: var(--foreground);
 }
 
 .role-finance .queue-item.active small {
-  color: hsl(215 30% 12% / 0.75);
+  color: var(--muted-foreground);
 }
 
 .referee-search {
@@ -850,7 +947,7 @@ textarea {
   padding: 8px 12px;
   border-radius: 6px;
   color: var(--foreground);
-  background: white;
+  background: var(--card);
   font-weight: 800;
 }
 
@@ -862,7 +959,7 @@ textarea {
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: white;
+  background: var(--card);
 }
 
 .referee-options li {
@@ -878,7 +975,7 @@ textarea {
   padding: 12px 14px;
   text-align: left;
   color: var(--foreground);
-  background: white;
+  background: var(--card);
 }
 
 .referee-options button:hover,
@@ -927,7 +1024,7 @@ textarea {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: white;
+  background: var(--card);
   box-shadow: var(--shadow-soft);
 }
 
@@ -1019,12 +1116,12 @@ textarea {
 }
 
 .queue-item.active {
-  color: white;
+  color: var(--on-primary);
   background: var(--primary);
 }
 
 .queue-item.active small {
-  color: hsl(0 0% 100% / 0.8);
+  color: var(--on-primary-muted);
 }
 
 .review-panel {
@@ -1052,7 +1149,7 @@ textarea {
   min-height: 42px;
   padding: 10px 14px;
   border-radius: 6px;
-  color: white;
+  color: var(--on-primary);
   background: var(--primary);
   font-weight: 800;
   white-space: nowrap;
@@ -1117,7 +1214,7 @@ textarea {
   padding: 9px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: white;
+  background: var(--card);
   font-weight: 700;
 }
 
@@ -1154,7 +1251,7 @@ textarea {
 
 .declaration-block p {
   margin: 0 0 14px;
-  color: hsl(215 28% 26%);
+  color: var(--text-soft);
   font-weight: 700;
   line-height: 1.7;
 }
@@ -1264,13 +1361,13 @@ textarea {
   }
 
   :root {
-    background: white;
+    background: var(--card);
     color: #000;
     font-family: "Times New Roman", Times, serif;
   }
 
   body {
-    background: white;
+    background: var(--card);
     color: #000;
     font-family: "Times New Roman", Times, serif;
     font-size: 11pt;

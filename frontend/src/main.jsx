@@ -7,7 +7,9 @@ import {
   FilePenLine,
   KeyRound,
   LogOut,
+  Moon,
   ShieldCheck,
+  Sun,
   UserRoundPlus,
   XCircle,
 } from "lucide-react";
@@ -33,6 +35,7 @@ import {
   isValidTanzaniaNin,
 } from "./workflowConfig";
 import tmaLogo from "./assets-tma-association-logo.jpeg";
+import { applyTheme, getTheme, toggleTheme } from "./theme";
 import "./styles.css";
 
 const emptyApplication = {
@@ -100,6 +103,26 @@ const serviceItems = [
   "Kufariki kwa mwanachama",
 ];
 
+function ThemeToggle({ className = "" }) {
+  const [theme, setTheme] = useState(getTheme);
+
+  function onToggle() {
+    setTheme(toggleTheme());
+  }
+
+  return (
+    <button
+      type="button"
+      className={`icon-button theme-toggle ${className}`.trim()}
+      onClick={onToggle}
+      title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+    >
+      {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+    </button>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState("login");
@@ -120,6 +143,7 @@ function App() {
   if (!user) {
     return (
       <main className="auth-shell">
+        <ThemeToggle className="auth-theme-toggle" />
         <section className="auth-panel">
           <div>
             <img className="hero-logo" src={tmaLogo} alt="TMA Action logo" />
@@ -160,6 +184,7 @@ function App() {
             </span>
           )}
           <span>{user.username}</span>
+          <ThemeToggle />
           <button
             className={`icon-button ${showAccount ? "active" : ""}`}
             onClick={() => setShowAccount((open) => !open)}
