@@ -73,6 +73,10 @@ function cleanApplication(application) {
     "emergency_relationship",
     "emergency_phone",
     "emergency_address",
+    "referee_application_id",
+    "referee_full_name",
+    "referee_phone",
+    "referee_registration_number",
     "declaration_accepted",
     "payment_receipt_path",
     "payment_receipt_uploaded_at",
@@ -88,7 +92,25 @@ function cleanApplication(application) {
     work_experience_years: payload.work_experience_years === "" ? null : payload.work_experience_years,
     date_of_birth: payload.date_of_birth || null,
     office_received_at: payload.office_received_at || null,
+    referee_application_id: payload.referee_application_id === "" || payload.referee_application_id == null
+      ? null
+      : Number(payload.referee_application_id),
   };
+}
+
+export async function listRefereeMembers(excludeApplicationId = null) {
+  requireSupabase();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  raise(userError);
+  const user = userData.user;
+  if (!user) throw new Error("You must sign in first.");
+
+  const { data, error } = await supabase.rpc("list_referee_members", {
+    exclude_user_id: user.id,
+    exclude_application_id: excludeApplicationId,
+  });
+  raise(error);
+  return data || [];
 }
 
 export async function getCurrentUser() {
@@ -164,6 +186,15 @@ export async function loginUser(form) {
 export async function logoutUser() {
   requireSupabase();
   const { error } = await supabase.auth.signOut();
+  raise(error);
+}
+
+export async function changePassword(newPassword) {
+  requireSupabase();
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error("Password must be at least 8 characters.");
+  }
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
   raise(error);
 }
 

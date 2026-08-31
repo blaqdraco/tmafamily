@@ -118,6 +118,7 @@ with check (
 );
 
 drop policy if exists "Admins can update all applications" on public.membership_applications;
+drop policy if exists "Staff can update applications" on public.membership_applications;
 create policy "Staff can update applications"
 on public.membership_applications for update
 to authenticated
@@ -125,6 +126,7 @@ using (public.is_staff())
 with check (public.is_staff());
 
 drop policy if exists "Admins can delete applications" on public.membership_applications;
+drop policy if exists "Staff can delete applications" on public.membership_applications;
 create policy "Staff can delete applications"
 on public.membership_applications for delete
 to authenticated

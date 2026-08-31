@@ -168,11 +168,31 @@ SMTP_USER=tmafamily@tmafamily.tmaglobal.org
 SMTP_PASSWORD=your-hostinger-mailbox-password
 SMTP_FROM_EMAIL=tmafamily@tmafamily.tmaglobal.org
 SMTP_FROM_NAME=TMA GLOBAL
+CRON_SECRET=choose-a-long-random-string
 ```
+
+Optional: set `CRON_SECRET` to protect `/api/keepalive` from public calls. Vercel Cron sends this header automatically on scheduled runs.
 
 Then deploy.
 
 The SMTP variables are used by the Vercel `/api/send-action-email` function for admin actions such as approve, reject, and request action. Keep `SMTP_PASSWORD` only in Vercel environment variables; do not commit it.
+
+## Supabase keepalive (prevent auto-pause)
+
+Free Supabase projects can pause after about a week of inactivity. This repo includes a Vercel Cron job that pings Supabase **once daily at 06:00 UTC**.
+
+- Endpoint: `/api/keepalive`
+- Config: `vercel.json` → `"crons"`
+
+After deploy, confirm the cron appears in Vercel → Project → Settings → Cron Jobs.
+
+Manual test:
+
+```bash
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://your-app.vercel.app/api/keepalive
+```
+
+You should get `{"ok":true,...}`.
 
 ## Notes
 

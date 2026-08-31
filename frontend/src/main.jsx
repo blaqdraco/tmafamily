@@ -5,17 +5,20 @@ import {
   ClipboardList,
   Clock3,
   FilePenLine,
+  KeyRound,
   LogOut,
   ShieldCheck,
   UserRoundPlus,
   XCircle,
 } from "lucide-react";
 import {
+  changePassword,
   getCurrentUser,
   getPaymentReceiptUrl,
   isSupabaseConfigured,
   listApplicationsForRole,
   listMyApplications,
+  listRefereeMembers,
   loginUser,
   logoutUser,
   registerUser,
@@ -55,6 +58,10 @@ const emptyApplication = {
   emergency_relationship: "",
   emergency_phone: "",
   emergency_address: "",
+  referee_application_id: "",
+  referee_full_name: "",
+  referee_phone: "",
+  referee_registration_number: "",
   declaration_accepted: false,
 };
 
@@ -82,6 +89,7 @@ const eligibilityRules = [
   "Awe na uzoefu wa kazi wa angalau mwaka mmoja.",
   "Awe tayari kutoa huduma ya ushauri kwa wanachama wengine.",
   "Awe tayari kushirikiana na wenzake katika shughuli mbalimbali za kijamii.",
+  "Awe na mdhamini (referee) aliye mwanachama aliyesajiliwa na kuidhinishwa.",
 ];
 
 const serviceItems = [
@@ -96,6 +104,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState("login");
   const [message, setMessage] = useState("");
+  const [showAccount, setShowAccount] = useState(false);
 
   useEffect(() => {
     getCurrentUser()
@@ -151,11 +160,20 @@ function App() {
             </span>
           )}
           <span>{user.username}</span>
-          <button className="icon-button" onClick={logout} title="Log out">
+          <button
+            className={`icon-button ${showAccount ? "active" : ""}`}
+            onClick={() => setShowAccount((open) => !open)}
+            title="Account settings"
+            type="button"
+          >
+            <KeyRound size={18} />
+          </button>
+          <button className="icon-button" onClick={logout} title="Log out" type="button">
             <LogOut size={18} />
           </button>
         </div>
       </header>
+      {showAccount && <AccountPanel user={user} onClose={() => setShowAccount(false)} />}
       <Dashboard user={user} />
     </main>
   );
@@ -212,6 +230,80 @@ function SupabaseSetupNotice() {
       <strong>Supabase setup needed</strong>
       <span>Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `frontend/.env.local` and in Vercel.</span>
     </div>
+  );
+}
+
+function AccountPanel({ user, onClose }) {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event) {
+    event.preventDefault();
+    setNotice("");
+    setError("");
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("New passwords do not match.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await changePassword(password);
+      setPassword("");
+      setConfirmPassword("");
+      setNotice("Password updated successfully.");
+    } catch (submitError) {
+      setError(submitError.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="account-panel">
+      <div className="account-panel-header">
+        <div>
+          <p className="eyebrow">Account</p>
+          <h2>Change password</h2>
+        </div>
+        <button type="button" className="account-close" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      <p className="muted account-email">{user.email}</p>
+      <form className="account-form" onSubmit={submit}>
+        <Field
+          label="New password"
+          type="password"
+          value={password}
+          onChange={setPassword}
+          required
+        />
+        <Field
+          label="Confirm new password"
+          type="password"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          required
+        />
+        {error && <p className="error">{error}</p>}
+        {notice && <p className="notice">{notice}</p>}
+        <div className="form-actions">
+          <button type="button" onClick={onClose}>Cancel</button>
+          <button type="submit" className="primary" disabled={saving}>
+            {saving ? "Updating..." : "Update password"}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }
 
@@ -360,6 +452,16 @@ function StatusCard({ application }) {
 function ApplicationForm({ application, setApplication, onSave, notice }) {
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState([]);
+  const [refereeMembers, setRefereeMembers] = useState([]);
+  const [refereesLoading, setRefereesLoading] = useState(true);
+
+  useEffect(() => {
+    setRefereesLoading(true);
+    listRefereeMembers(application.id || null)
+      .then((members) => setRefereeMembers(members))
+      .catch(() => setRefereeMembers([]))
+      .finally(() => setRefereesLoading(false));
+  }, [application.id]);
 
   const update = (name, value) => setApplication({ ...application, [name]: value });
   const updateList = (listName, index, field, value) => {
@@ -503,6 +605,34 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
 
       {step === 2 && (
         <>
+          <Section title="6. MDHAMINI / REFEREE">
+            <p className="section-note">Chagua mwanachama aliyesajiliwa na kuidhinishwa awe mdhamini wako.</p>
+            <RefereeSearchSelect
+              members={refereeMembers}
+              loading={refereesLoading}
+              selectedId={application.referee_application_id}
+              onSelect={(member) => {
+                if (!member) {
+                  setApplication({
+                    ...application,
+                    referee_application_id: "",
+                    referee_full_name: "",
+                    referee_phone: "",
+                    referee_registration_number: "",
+                  });
+                  return;
+                }
+                setApplication({
+                  ...application,
+                  referee_application_id: member.id,
+                  referee_full_name: member.full_name,
+                  referee_phone: member.phone_number,
+                  referee_registration_number: member.office_registration_number || "",
+                });
+              }}
+            />
+          </Section>
+
           <Section title="7. TAARIFA ZA DHARURA">
             <div className="two-col">
               <Field label="Jina la Mtu wa Dharura" value={application.emergency_name} onChange={(v) => update("emergency_name", v)} required />
@@ -540,6 +670,86 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
         )}
       </div>
     </form>
+  );
+}
+
+function RefereeSearchSelect({ members, loading, selectedId, onSelect }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = members.find((member) => String(member.id) === String(selectedId));
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = members.filter((member) => {
+    if (!normalizedQuery) return true;
+    const haystack = [
+      member.full_name,
+      member.phone_number,
+      member.email,
+      member.office_registration_number,
+    ].join(" ").toLowerCase();
+    return haystack.includes(normalizedQuery);
+  });
+
+  return (
+    <div className="referee-search">
+      {loading && <p className="muted">Inapakia orodha ya wanachama...</p>}
+      {!loading && !members.length && (
+        <p className="muted">Hakuna wanachama walioidhinishwa kwa sasa. Wasiliana na ofisi.</p>
+      )}
+      {selected && (
+        <div className="referee-selected">
+          <div>
+            <strong>{selected.full_name}</strong>
+            <span>{selected.office_registration_number ? `Reg #${selected.office_registration_number}` : "Registered member"}</span>
+            <small>{selected.phone_number}</small>
+          </div>
+          <button type="button" onClick={() => { onSelect(null); setQuery(""); setOpen(true); }}>
+            Change
+          </button>
+        </div>
+      )}
+      {(!selected || open) && members.length > 0 && (
+        <>
+          <label className="field">
+            <span>Tafuta mdhamini</span>
+            <input
+              type="search"
+              value={query}
+              placeholder="Tafuta kwa jina, simu, barua pepe, au namba ya usajili..."
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setOpen(true);
+              }}
+              onFocus={() => setOpen(true)}
+            />
+          </label>
+          {open && (
+            <ul className="referee-options">
+              {filtered.map((member) => (
+                <li key={member.id}>
+                  <button
+                    type="button"
+                    className={String(selectedId) === String(member.id) ? "active" : ""}
+                    onClick={() => {
+                      onSelect(member);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                  >
+                    <strong>{member.full_name}</strong>
+                    <span>
+                      {member.office_registration_number ? `#${member.office_registration_number}` : "Approved member"}
+                      {" · "}
+                      {member.phone_number}
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {!filtered.length && <li className="muted">Hakuna mwanachama anayelingana na utafutaji wako.</li>}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -1084,6 +1294,9 @@ function validateFamilyStep(application) {
 
 function validateFinishStep(application) {
   const errors = [];
+  if (!application.referee_application_id) {
+    errors.push("Mdhamini (referee) aliyesajiliwa anahitajika.");
+  }
   if (!String(application.emergency_name || "").trim()) errors.push("Jina la mtu wa dharura linahitajika.");
   if (!String(application.emergency_relationship || "").trim()) errors.push("Uhusiano wa mtu wa dharura unahitajika.");
   if (!String(application.emergency_phone || "").trim()) errors.push("Namba ya simu ya dharura inahitajika.");

@@ -3,6 +3,12 @@
   "installCommand": "npm install && cd frontend && npm install",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
+  "crons": [
+    {
+      "path": "/api/keepalive",
+      "schedule": "0 6 * * *"
+    }
+  ],
   "functions": {
     "api/send-action-email.js": {
       "includeFiles": "api/assets/**"
