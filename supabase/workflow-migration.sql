@@ -125,12 +125,12 @@ to authenticated
 using (public.is_staff())
 with check (public.is_staff());
 
-drop policy if exists "Admins can delete applications" on public.membership_applications;
+.drop policy if exists "Admins can delete applications" on public.membership_applications;
 drop policy if exists "Staff can delete applications" on public.membership_applications;
-create policy "Staff can delete applications"
+create policy "Admins can delete applications"
 on public.membership_applications for delete
 to authenticated
-using (public.is_staff());
+using (public.is_admin());
 
 insert into storage.buckets (id, name, public)
 values ('payment-receipts', 'payment-receipts', false)

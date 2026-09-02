@@ -1176,6 +1176,20 @@ textarea {
   white-space: nowrap;
 }
 
+.danger-button {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: var(--on-primary);
+  background: var(--danger);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.danger-button:hover {
+  filter: brightness(1.05);
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

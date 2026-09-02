@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   changePassword,
+  deleteApplication,
   getCurrentUser,
   getPaymentReceiptUrl,
   isSupabaseConfigured,
@@ -868,6 +869,21 @@ function StaffWorkflowArea({ user }) {
     }
   }
 
+  async function removeApplication() {
+    if (!selected) return;
+    const name = selected.full_name || "this application";
+    if (!window.confirm(`Delete application for ${name}? This cannot be undone.`)) return;
+
+    setNotice("");
+    try {
+      await deleteApplication(selected.id);
+      await load();
+      setNotice("Application deleted.");
+    } catch (error) {
+      setNotice(error.message);
+    }
+  }
+
   function changeFilter(nextFilter) {
     setFilter(nextFilter);
     const nextSelected = applications.find((item) => nextFilter === "all" || item.status === nextFilter);
@@ -920,7 +936,13 @@ function StaffWorkflowArea({ user }) {
           {!filteredApplications.length && <p className="muted">No applications in this view.</p>}
         </div>
         {selected ? (
-          <WorkflowReview application={selected} user={user} onReview={review} notice={notice} />
+          <WorkflowReview
+            application={selected}
+            user={user}
+            onReview={review}
+            onDelete={user.role === ROLES.ADMIN ? removeApplication : undefined}
+            notice={notice}
+          />
         ) : (
           <p>No applications found.</p>
         )}
@@ -966,7 +988,7 @@ function StatCard({ icon, label, value }) {
   );
 }
 
-function WorkflowReview({ application, user, onReview, notice }) {
+function WorkflowReview({ application, user, onReview, onDelete, notice }) {
   const portal = ROLE_PORTALS[user.role] || ROLE_PORTALS.admin;
   const [fields, setFields] = useState({
     office_registration_number: application.office_registration_number || "",
@@ -1023,12 +1045,19 @@ function WorkflowReview({ application, user, onReview, notice }) {
           <h2>{application.full_name}</h2>
         </div>
         <div className="review-actions">
+          {onDelete && (
+            <button type="button" className="danger-button" onClick={onDelete}>
+              Delete application
+            </button>
+          )}
           <button type="button" className="print-button" onClick={() => window.print()}>
             Print form
           </button>
           <StatusCard application={application} />
         </div>
       </div>
+
+      {notice && <p className={notice.includes("not sent") ? "error" : "notice"}>{notice}</p>}
 
       <WorkflowTimeline status={application.status} />
       <DocumentHeader subtitle="SEHEMU YA PILI: FOMU YA USAJILI WA MWANACHAMA" />
@@ -1076,7 +1105,6 @@ function WorkflowReview({ application, user, onReview, notice }) {
               </button>
             )}
           </div>
-          {notice && <p className={notice.includes("not sent") ? "error" : "notice"}>{notice}</p>}
         </Section>
       )}
     </article>

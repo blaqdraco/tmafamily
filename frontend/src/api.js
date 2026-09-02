@@ -432,5 +432,19 @@ export async function reviewApplication(id, action, fields, role) {
   return application;
 }
 
+export async function deleteApplication(id) {
+  requireSupabase();
+  const user = await getCurrentUser();
+  if (!user?.is_admin) {
+    throw new Error("Only administrators can delete applications.");
+  }
+
+  const { error } = await supabase
+    .from("membership_applications")
+    .delete()
+    .eq("id", id);
+  raise(error);
+}
+
 // Backward-compatible exports
 export const listAllApplications = () => listApplicationsForRole(ROLES.ADMIN);
