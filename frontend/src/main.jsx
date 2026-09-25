@@ -21,7 +21,6 @@ import {
   isSupabaseConfigured,
   listApplicationsForRole,
   listMyApplications,
-  listRefereeMembers,
   loginUser,
   logoutUser,
   registerUser,
@@ -93,7 +92,7 @@ const eligibilityRules = [
   "Awe na uzoefu wa kazi wa angalau mwaka mmoja.",
   "Awe tayari kutoa huduma ya ushauri kwa wanachama wengine.",
   "Awe tayari kushirikiana na wenzake katika shughuli mbalimbali za kijamii.",
-  "Awe na mdhamini (referee) aliye mwanachama aliyesajiliwa na kuidhinishwa.",
+  "Awe na mdhamini (referee).",
 ];
 
 const serviceItems = [
@@ -480,18 +479,13 @@ function StatusCard({ application }) {
 function ApplicationForm({ application, setApplication, onSave, notice }) {
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState([]);
-  const [refereeMembers, setRefereeMembers] = useState([]);
-  const [refereesLoading, setRefereesLoading] = useState(true);
-
-  useEffect(() => {
-    setRefereesLoading(true);
-    listRefereeMembers(application.id || null)
-      .then((members) => setRefereeMembers(members))
-      .catch(() => setRefereeMembers([]))
-      .finally(() => setRefereesLoading(false));
-  }, [application.id]);
-
   const update = (name, value) => setApplication({ ...application, [name]: value });
+  const updateReferee = (name, value) => setApplication({
+    ...application,
+    [name]: value,
+    referee_application_id: "",
+    referee_registration_number: "",
+  });
   const updateList = (listName, index, field, value) => {
     const rows = [...application[listName]];
     rows[index] = { ...rows[index], [field]: value };
@@ -634,31 +628,11 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
       {step === 2 && (
         <>
           <Section title="6. MDHAMINI / REFEREE">
-            <p className="section-note">Chagua mwanachama aliyesajiliwa na kuidhinishwa awe mdhamini wako.</p>
-            <RefereeSearchSelect
-              members={refereeMembers}
-              loading={refereesLoading}
-              selectedId={application.referee_application_id}
-              onSelect={(member) => {
-                if (!member) {
-                  setApplication({
-                    ...application,
-                    referee_application_id: "",
-                    referee_full_name: "",
-                    referee_phone: "",
-                    referee_registration_number: "",
-                  });
-                  return;
-                }
-                setApplication({
-                  ...application,
-                  referee_application_id: member.id,
-                  referee_full_name: member.full_name,
-                  referee_phone: member.phone_number,
-                  referee_registration_number: member.office_registration_number || "",
-                });
-              }}
-            />
+            <p className="section-note">Weka jina na namba ya simu ya mdhamini wako. Si lazima awe mwanachama.</p>
+            <div className="two-col">
+              <Field label="Jina Kamili la Mdhamini" value={application.referee_full_name} onChange={(v) => updateReferee("referee_full_name", v)} required />
+              <Field label="Namba ya Simu ya Mdhamini" type="tel" value={application.referee_phone} onChange={(v) => updateReferee("referee_phone", v)} required />
+            </div>
           </Section>
 
           <Section title="7. TAARIFA ZA DHARURA">
@@ -698,86 +672,6 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
         )}
       </div>
     </form>
-  );
-}
-
-function RefereeSearchSelect({ members, loading, selectedId, onSelect }) {
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const selected = members.find((member) => String(member.id) === String(selectedId));
-  const normalizedQuery = query.trim().toLowerCase();
-  const filtered = members.filter((member) => {
-    if (!normalizedQuery) return true;
-    const haystack = [
-      member.full_name,
-      member.phone_number,
-      member.email,
-      member.office_registration_number,
-    ].join(" ").toLowerCase();
-    return haystack.includes(normalizedQuery);
-  });
-
-  return (
-    <div className="referee-search">
-      {loading && <p className="muted">Inapakia orodha ya wanachama...</p>}
-      {!loading && !members.length && (
-        <p className="muted">Hakuna wanachama walioidhinishwa kwa sasa. Wasiliana na ofisi.</p>
-      )}
-      {selected && (
-        <div className="referee-selected">
-          <div>
-            <strong>{selected.full_name}</strong>
-            <span>{selected.office_registration_number ? `Reg #${selected.office_registration_number}` : "Registered member"}</span>
-            <small>{selected.phone_number}</small>
-          </div>
-          <button type="button" onClick={() => { onSelect(null); setQuery(""); setOpen(true); }}>
-            Change
-          </button>
-        </div>
-      )}
-      {(!selected || open) && members.length > 0 && (
-        <>
-          <label className="field">
-            <span>Tafuta mdhamini</span>
-            <input
-              type="search"
-              value={query}
-              placeholder="Tafuta kwa jina, simu, barua pepe, au namba ya usajili..."
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setOpen(true);
-              }}
-              onFocus={() => setOpen(true)}
-            />
-          </label>
-          {open && (
-            <ul className="referee-options">
-              {filtered.map((member) => (
-                <li key={member.id}>
-                  <button
-                    type="button"
-                    className={String(selectedId) === String(member.id) ? "active" : ""}
-                    onClick={() => {
-                      onSelect(member);
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                  >
-                    <strong>{member.full_name}</strong>
-                    <span>
-                      {member.office_registration_number ? `#${member.office_registration_number}` : "Approved member"}
-                      {" · "}
-                      {member.phone_number}
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {!filtered.length && <li className="muted">Hakuna mwanachama anayelingana na utafutaji wako.</li>}
-            </ul>
-          )}
-        </>
-      )}
-    </div>
   );
 }
 
@@ -1349,9 +1243,9 @@ function validateFamilyStep(application) {
 
 function validateFinishStep(application) {
   const errors = [];
-  if (!application.referee_application_id) {
-    errors.push("Mdhamini (referee) aliyesajiliwa anahitajika.");
-  }
+  if (!String(application.referee_full_name || "").trim()) errors.push("Jina kamili la mdhamini linahitajika.");
+  if (!String(application.referee_phone || "").trim()) errors.push("Namba ya simu ya mdhamini inahitajika.");
+  else if (!isValidPhone(application.referee_phone)) errors.push("Namba ya simu ya mdhamini si sahihi.");
   if (!String(application.emergency_name || "").trim()) errors.push("Jina la mtu wa dharura linahitajika.");
   if (!String(application.emergency_relationship || "").trim()) errors.push("Uhusiano wa mtu wa dharura unahitajika.");
   if (!String(application.emergency_phone || "").trim()) errors.push("Namba ya simu ya dharura inahitajika.");

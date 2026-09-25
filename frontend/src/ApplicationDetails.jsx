@@ -157,7 +157,7 @@ export function ApplicationDetails({ application }) {
       <Section title="6. MDHAMINI / REFEREE">
         <div className="detail-grid">
           <Summary label="Jina la Mdhamini" value={application.referee_full_name} />
-          <Summary label="Namba ya Usajili wa Mdhamini" value={application.referee_registration_number} />
+          {application.referee_registration_number && <Summary label="Namba ya Usajili wa Mdhamini" value={application.referee_registration_number} />}
           <Summary label="Simu ya Mdhamini" value={application.referee_phone} />
         </div>
       </Section>

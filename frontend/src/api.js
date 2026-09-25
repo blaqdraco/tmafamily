@@ -98,21 +98,6 @@ function cleanApplication(application) {
   };
 }
 
-export async function listRefereeMembers(excludeApplicationId = null) {
-  requireSupabase();
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  raise(userError);
-  const user = userData.user;
-  if (!user) throw new Error("You must sign in first.");
-
-  const { data, error } = await supabase.rpc("list_referee_members", {
-    exclude_user_id: user.id,
-    exclude_application_id: excludeApplicationId,
-  });
-  raise(error);
-  return data || [];
-}
-
 export async function getCurrentUser() {
   requireSupabase();
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
