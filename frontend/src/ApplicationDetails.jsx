@@ -154,15 +154,7 @@ export function ApplicationDetails({ application }) {
         />
       </Section>
 
-      <Section title="6. MDHAMINI / REFEREE">
-        <div className="detail-grid">
-          <Summary label="Jina la Mdhamini" value={application.referee_full_name} />
-          {application.referee_registration_number && <Summary label="Namba ya Usajili wa Mdhamini" value={application.referee_registration_number} />}
-          <Summary label="Simu ya Mdhamini" value={application.referee_phone} />
-        </div>
-      </Section>
-
-      <Section title="7. TAARIFA ZA DHARURA">
+      <Section title="6. TAARIFA ZA DHARURA">
         <div className="detail-grid">
           <Summary label="Jina la Mtu wa Dharura" value={application.emergency_name} />
           <Summary label="Uhusiano" value={application.emergency_relationship} />
@@ -171,7 +163,7 @@ export function ApplicationDetails({ application }) {
         </div>
       </Section>
 
-      <Section title="9. TAMKO LA MWANACHAMA">
+      <Section title="7. TAMKO LA MWANACHAMA">
         <DeclarationBlock
           name={application.full_name}
           date={formatDate(application.submitted_at || application.created_at)}

@@ -61,10 +61,6 @@ const emptyApplication = {
   emergency_relationship: "",
   emergency_phone: "",
   emergency_address: "",
-  referee_application_id: "",
-  referee_full_name: "",
-  referee_phone: "",
-  referee_registration_number: "",
   declaration_accepted: false,
 };
 
@@ -92,7 +88,6 @@ const eligibilityRules = [
   "Awe na uzoefu wa kazi wa angalau mwaka mmoja.",
   "Awe tayari kutoa huduma ya ushauri kwa wanachama wengine.",
   "Awe tayari kushirikiana na wenzake katika shughuli mbalimbali za kijamii.",
-  "Awe na mdhamini (referee).",
 ];
 
 const serviceItems = [
@@ -480,12 +475,6 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState([]);
   const update = (name, value) => setApplication({ ...application, [name]: value });
-  const updateReferee = (name, value) => setApplication({
-    ...application,
-    [name]: value,
-    referee_application_id: "",
-    referee_registration_number: "",
-  });
   const updateList = (listName, index, field, value) => {
     const rows = [...application[listName]];
     rows[index] = { ...rows[index], [field]: value };
@@ -627,15 +616,7 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
 
       {step === 2 && (
         <>
-          <Section title="6. MDHAMINI / REFEREE">
-            <p className="section-note">Weka jina na namba ya simu ya mdhamini wako. Si lazima awe mwanachama.</p>
-            <div className="two-col">
-              <Field label="Jina Kamili la Mdhamini" value={application.referee_full_name} onChange={(v) => updateReferee("referee_full_name", v)} required />
-              <Field label="Namba ya Simu ya Mdhamini" type="tel" value={application.referee_phone} onChange={(v) => updateReferee("referee_phone", v)} required />
-            </div>
-          </Section>
-
-          <Section title="7. TAARIFA ZA DHARURA">
+          <Section title="6. TAARIFA ZA DHARURA">
             <div className="two-col">
               <Field label="Jina la Mtu wa Dharura" value={application.emergency_name} onChange={(v) => update("emergency_name", v)} required />
               <Field label="Uhusiano" value={application.emergency_relationship} onChange={(v) => update("emergency_relationship", v)} required />
@@ -644,7 +625,7 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
             <TextArea label="Anwani ya Dharura" value={application.emergency_address} onChange={(v) => update("emergency_address", v)} />
           </Section>
 
-          <Section title="9. TAMKO LA MWANACHAMA">
+          <Section title="7. TAMKO LA MWANACHAMA">
             <DeclarationBlock
               name={application.full_name}
               date={formatDate(application.submitted_at || application.created_at)}
@@ -1243,9 +1224,6 @@ function validateFamilyStep(application) {
 
 function validateFinishStep(application) {
   const errors = [];
-  if (!String(application.referee_full_name || "").trim()) errors.push("Jina kamili la mdhamini linahitajika.");
-  if (!String(application.referee_phone || "").trim()) errors.push("Namba ya simu ya mdhamini inahitajika.");
-  else if (!isValidPhone(application.referee_phone)) errors.push("Namba ya simu ya mdhamini si sahihi.");
   if (!String(application.emergency_name || "").trim()) errors.push("Jina la mtu wa dharura linahitajika.");
   if (!String(application.emergency_relationship || "").trim()) errors.push("Uhusiano wa mtu wa dharura unahitajika.");
   if (!String(application.emergency_phone || "").trim()) errors.push("Namba ya simu ya dharura inahitajika.");
