@@ -82,6 +82,9 @@ function DeclarationBlock({ name, date, accepted }) {
 
 export function ApplicationDetails({ application }) {
   const location = [application.region, application.district].filter(Boolean).join(", ");
+  const maxParents = application.marital_status === "single" ? 2 : 4;
+  const rawParents = Array.isArray(application.parents) ? application.parents : [];
+  const visibleParents = Array.from({ length: maxParents }, (_, i) => rawParents[i] || { full_name: "", relationship: "", phone_number: "" });
 
   return (
     <>
@@ -127,9 +130,12 @@ export function ApplicationDetails({ application }) {
       </Section>
 
       <Section title="4. TAARIFA ZA WAZAZI / WALEZI / WAKWE">
-        <Summary label="Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya 02)" value={filledRowCount(application.parents)} />
+        <Summary
+          label={`Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya ${maxParents < 10 ? '0' + maxParents : maxParents})`}
+          value={filledRowCount(visibleParents)}
+        />
         <ReadonlyRows
-          rows={application.parents}
+          rows={visibleParents}
           columns={[
             ["full_name", "Jina Kamili"],
             ["relationship", "Uhusiano"],

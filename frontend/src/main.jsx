@@ -61,7 +61,7 @@ const emptyApplication = {
   work_experience_years: "",
   marital_status: "single",
   member_group: "youth",
-  parents: Array.from({ length: 2 }, () => ({ full_name: "", relationship: "", phone_number: "" })),
+  parents: Array.from({ length: 4 }, () => ({ full_name: "", relationship: "", phone_number: "" })),
   children: Array.from({ length: 4 }, () => ({ full_name: "", gender: "", date_of_birth: "", age: "", school_or_work: "" })),
   emergency_name: "",
   emergency_relationship: "",
@@ -520,6 +520,9 @@ function ApplicationForm({ application, setApplication, onSave, notice, busy }) 
   const lockMessage = registrationLockMessage(application);
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState([]);
+  const maxParents = application.marital_status === "single" ? 2 : 4;
+  const rawParents = Array.isArray(application.parents) ? application.parents : [];
+  const visibleParents = Array.from({ length: maxParents }, (_, i) => rawParents[i] || { full_name: "", relationship: "", phone_number: "" });
   const update = (name, value) => setApplication({ ...application, [name]: value, ...(name === "date_of_birth" ? { age: ageFromBirthdate(value) } : {}) });
   const updateList = (listName, index, field, value) => {
     const rows = [...application[listName]];
@@ -627,9 +630,15 @@ function ApplicationForm({ application, setApplication, onSave, notice, busy }) 
       {step === 1 && (
         <>
           <Section title="4. TAARIFA ZA WAZAZI / WALEZI / WAKWE">
-            <Field label="Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya 02)" value={filledRowCount(application.parents)} onChange={() => {}} type="number" readOnly />
+            <Field
+              label={`Idadi ya Wazazi/Walezi/Wakwe wanaotajwa (Si zaidi ya ${maxParents < 10 ? '0' + maxParents : maxParents})`}
+              value={filledRowCount(visibleParents)}
+              onChange={() => {}}
+              type="number"
+              readOnly
+            />
             <GridRows
-              rows={application.parents}
+              rows={visibleParents}
               columns={[
                 ["full_name", "Jina Kamili"],
                 ["relationship", "Uhusiano"],
@@ -1273,8 +1282,11 @@ function validatePersonalStep(application) {
 
 function validateFamilyStep(application) {
   const errors = [];
+  const maxParents = application.marital_status === "single" ? 2 : 4;
   const parentCount = filledRowCount(application.parents);
-  if (parentCount > 2) errors.push("Wazazi/walezi wasizidi wawili.");
+  if (parentCount > maxParents) {
+    errors.push(`Wazazi/walezi/wakwe wasizidi ${maxParents === 2 ? "wawili (02)" : "wanne (04)"}.`);
+  }
   return errors;
 }
 
