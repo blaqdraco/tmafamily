@@ -5,6 +5,7 @@ import {
   STATUS_LABELS,
   WORKFLOW_STATUSES,
   isStaffRole,
+  registrationLockMessage,
 } from "./workflowConfig";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
@@ -201,6 +202,8 @@ export async function listMyApplications() {
 
 export async function saveApplication(application, submit = false) {
   requireSupabase();
+  const lockMessage = registrationLockMessage(application);
+  if (lockMessage) throw new Error(lockMessage);
   const { data: userData, error: userError } = await supabase.auth.getUser();
   raise(userError);
   const user = userData.user;
@@ -225,9 +228,14 @@ export async function saveApplication(application, submit = false) {
       .from("membership_applications")
       .update(payload)
       .eq("id", application.id)
+      .eq("user_id", user.id)
+      .in("status", ["draft", "action_required", "rejected"])
       .select()
-      .single();
+      .maybeSingle();
     raise(error);
+    if (!data) {
+      throw new Error("Your registration could not be saved. It may already be submitted or its status may have changed. Refresh the page to check its current status.");
+    }
     return withStatusLabel(data);
   }
 

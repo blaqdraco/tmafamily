@@ -27,6 +27,20 @@ export const STATUS_LABELS = {
   action_required: "Action required",
 };
 
+export function registrationLockMessage(application) {
+  if (!application.id || ["draft", "action_required", "rejected"].includes(application.status)) return "";
+  if (application.status === "approved") return "Your registration has been approved. No further submission is needed.";
+  const stage = {
+    pending: "Communication",
+    pending_communication: "Communication",
+    pending_hr: "HR",
+    pending_finance: "Finance",
+  }[application.status];
+  return stage
+    ? `Your registration has already been submitted and is awaiting ${stage} review. You do not need to submit it again.`
+    : "Your registration cannot be edited at its current stage. Please check your registration status.";
+}
+
 export const WORKFLOW_STEPS = [
   { id: "applicant", label: "Applicant" },
   { id: "communication", label: "Communication" },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   CheckCircle2,
@@ -33,6 +33,7 @@ import {
   ROLE_PORTALS,
   ROLES,
   isValidTanzaniaNin,
+  registrationLockMessage,
 } from "./workflowConfig";
 import tmaLogo from "./assets-tma-association-logo.jpeg";
 import { applyTheme, getTheme, toggleTheme } from "./theme";
@@ -338,13 +339,16 @@ function Dashboard({ user }) {
 }
 
 function MemberArea() {
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
   const [active, setActive] = useState(emptyApplication);
   const [notice, setNotice] = useState("");
   const [receiptPreview, setReceiptPreview] = useState("");
 
   useEffect(() => {
-    load();
+    load().catch((error) => setNotice(error.message)).finally(() => setLoading(false));
   }, []);
 
   async function load() {
@@ -363,6 +367,14 @@ function MemberArea() {
   }
 
   async function save(submit = false) {
+    if (loading || savingRef.current) return;
+    const lockMessage = registrationLockMessage(active);
+    if (lockMessage) {
+      setNotice(lockMessage);
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
     setNotice("");
     try {
       const data = await saveApplication(active, submit);
@@ -371,6 +383,9 @@ function MemberArea() {
       setNotice(submit ? "Registration submitted to Communication for review." : "Draft saved.");
     } catch (error) {
       setNotice(error.message);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
@@ -441,7 +456,7 @@ function MemberArea() {
           </div>
         )}
       </aside>
-      <ApplicationForm application={active} setApplication={setActive} onSave={save} notice={notice} />
+      <ApplicationForm application={active} setApplication={setActive} onSave={save} notice={notice} busy={loading || saving} />
     </section>
   );
 }
@@ -471,7 +486,8 @@ function StatusCard({ application }) {
   );
 }
 
-function ApplicationForm({ application, setApplication, onSave, notice }) {
+function ApplicationForm({ application, setApplication, onSave, notice, busy }) {
+  const lockMessage = registrationLockMessage(application);
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState([]);
   const update = (name, value) => setApplication({ ...application, [name]: value });
@@ -641,15 +657,16 @@ function ApplicationForm({ application, setApplication, onSave, notice }) {
           {errors.map((error) => <p key={error}>{error}</p>)}
         </div>
       )}
-      {notice && <p className="notice">{notice}</p>}
+      {lockMessage && <p className="notice" role="status">{lockMessage}</p>}
+      {notice && notice !== lockMessage && <p className="notice" role="status">{notice}</p>}
 
       <div className="form-actions">
         {step > 0 && <button type="button" onClick={goBack}>Back</button>}
-        <button type="button" onClick={() => onSave(false)}>Save draft</button>
+        <button type="button" disabled={busy || Boolean(lockMessage)} onClick={() => onSave(false)}>Save draft</button>
         {step < FORM_STEPS.length - 1 ? (
           <button type="button" className="primary" onClick={goNext}>Next</button>
         ) : (
-          <button type="button" className="primary" onClick={submitRegistration}>Submit registration</button>
+          <button type="button" className="primary" disabled={busy || Boolean(lockMessage)} onClick={submitRegistration}>Submit registration</button>
         )}
       </div>
     </form>

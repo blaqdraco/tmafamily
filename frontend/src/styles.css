@@ -700,6 +700,11 @@ textarea {
   background: var(--primary);
 }
 
+.form-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .form-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
