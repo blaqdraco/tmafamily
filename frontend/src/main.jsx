@@ -34,6 +34,11 @@ import {
   ROLES,
   isValidTanzaniaNin,
   registrationLockMessage,
+  ageFromBirthdate,
+  canReviewApplication,
+  sortedHistory,
+  submissionLabel,
+  STATUS_LABELS,
 } from "./workflowConfig";
 import tmaLogo from "./assets-tma-association-logo.jpeg";
 import { applyTheme, getTheme, toggleTheme } from "./theme";
@@ -205,6 +210,7 @@ function App() {
 function AuthForm({ mode, setMode, onDone, message, setMessage }) {
   const [form, setForm] = useState({ username: "", password: "", email: "", first_name: "", last_name: "" });
   const isRegister = mode === "register";
+  const [showPassword, setShowPassword] = useState(false);
 
   async function submit(event) {
     event.preventDefault();
@@ -237,7 +243,8 @@ function AuthForm({ mode, setMode, onDone, message, setMessage }) {
       {isRegister && <Field label="Email" type="email" value={form.email} onChange={(email) => setForm({ ...form, email })} />}
       {!isRegister && <Field label="Email" type="email" value={form.email} onChange={(email) => setForm({ ...form, email })} />}
       {isRegister && <Field label="Username" value={form.username} onChange={(username) => setForm({ ...form, username })} />}
-      <Field label="Password" type="password" value={form.password} onChange={(password) => setForm({ ...form, password })} />
+      <Field label="Password" type={showPassword ? "text" : "password"} value={form.password} onChange={(password) => setForm({ ...form, password })} />
+      <label className="password-toggle"><input type="checkbox" checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} /> Show password</label>
       {message && <p className="error">{message}</p>}
       <button className="primary">{isRegister ? "Create account" : "Sign in"}</button>
       <button type="button" className="link-button" onClick={() => setMode(isRegister ? "login" : "register")}>
@@ -416,6 +423,7 @@ function MemberArea() {
           <>
             <StatusCard application={latest} />
             <WorkflowTimeline status={latest.status} />
+            <ApplicationHistory application={latest} />
           </>
         ) : (
           <p>No registration has been started yet.</p>
@@ -461,6 +469,28 @@ function MemberArea() {
   );
 }
 
+function ApplicationHistory({ application }) {
+  const events = sortedHistory(application);
+  const labels = { submitted: "Submitted", resubmitted: "Resubmitted", rejected: "Rejected", action_required: "Action required", approved: "Approved", forwarded: "Forwarded", draft: "Draft created", legacy_status: "Earlier status (reviewer not recorded)" };
+  return (
+    <section className="application-history">
+      <h3>Registration history</h3>
+      {!events.length && <p>No recorded history yet.</p>}
+      <ol>
+        {events.map((event) => (
+          <li key={event.id}>
+            <strong>{labels[event.action] || event.action}</strong>
+            <span>{event.actor_name || "Reviewer not recorded"} · {ROLE_PORTALS[event.actor_role]?.badge || (event.actor_role === "member" ? "Applicant" : "Unknown role")}</span>
+            <time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString()}</time>
+            <span>{event.from_status ? `${STATUS_LABELS[event.from_status] || event.from_status} → ` : ""}{STATUS_LABELS[event.to_status] || event.to_status}</span>
+            {event.note && <p>{event.note}</p>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function StatusCard({ application }) {
   const icons = {
     pending: <Clock3 size={20} />,
@@ -479,7 +509,7 @@ function StatusCard({ application }) {
         <strong>{application.status_label}</strong>
         <span>{application.full_name}</span>
       </div>
-      {(application.action_required_note || application.office_comments) && (
+      {["rejected", "action_required"].includes(application.status) && (application.action_required_note || application.office_comments) && (
         <p>{application.action_required_note || application.office_comments}</p>
       )}
     </div>
@@ -490,7 +520,7 @@ function ApplicationForm({ application, setApplication, onSave, notice, busy }) 
   const lockMessage = registrationLockMessage(application);
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState([]);
-  const update = (name, value) => setApplication({ ...application, [name]: value });
+  const update = (name, value) => setApplication({ ...application, [name]: value, ...(name === "date_of_birth" ? { age: ageFromBirthdate(value) } : {}) });
   const updateList = (listName, index, field, value) => {
     const rows = [...application[listName]];
     rows[index] = { ...rows[index], [field]: value };
@@ -556,7 +586,7 @@ function ApplicationForm({ application, setApplication, onSave, notice, busy }) 
                 ]}
               />
               <Field label="Tarehe ya Kuzaliwa" type="date" value={application.date_of_birth} onChange={(v) => update("date_of_birth", v)} />
-              <Field label="Umri" type="number" value={application.age || ""} onChange={(v) => update("age", v)} />
+              <Field label="Umri (automatic)" type="number" value={ageFromBirthdate(application.date_of_birth)} readOnly />
               <Field label="Namba ya Simu" value={application.phone_number} onChange={(v) => update("phone_number", v)} required />
               <Field label="Barua Pepe" type="email" value={application.email} onChange={(v) => update("email", v)} required />
               <Field label="Namba ya NIDA" value={application.nida_number} onChange={(v) => update("nida_number", v)} required />
@@ -666,7 +696,7 @@ function ApplicationForm({ application, setApplication, onSave, notice, busy }) 
         {step < FORM_STEPS.length - 1 ? (
           <button type="button" className="primary" onClick={goNext}>Next</button>
         ) : (
-          <button type="button" className="primary" disabled={busy || Boolean(lockMessage)} onClick={submitRegistration}>Submit registration</button>
+          <button type="button" className="primary" disabled={busy || Boolean(lockMessage)} onClick={submitRegistration}>{["rejected", "action_required"].includes(application.status) ? "Resubmit registration" : "Submit registration"}</button>
         )}
       </div>
     </form>
@@ -730,6 +760,8 @@ function GuideList({ title, items }) {
 }
 
 function StaffWorkflowArea({ user }) {
+  const reviewingRef = useRef(false);
+  const [reviewing, setReviewing] = useState(false);
   const portal = ROLE_PORTALS[user.role] || ROLE_PORTALS.admin;
   const [applications, setApplications] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -737,27 +769,33 @@ function StaffWorkflowArea({ user }) {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    load();
+    load().catch((error) => setNotice(error.message));
   }, [user.role]);
 
   async function load() {
     const data = await listApplicationsForRole(user.role);
     setApplications(data);
     setSelected((current) => {
-      if (!current) return data[0] || null;
+      if (!current) return data.find((item) => user.role === ROLES.ADMIN || item.status === portal.queueStatus) || null;
       return data.find((item) => item.id === current.id) || data[0] || null;
     });
   }
 
   async function review(action, fields) {
+    if (reviewingRef.current || !selected) return;
+    reviewingRef.current = true;
+    setReviewing(true);
     setNotice("");
     try {
-      const data = await reviewApplication(selected.id, action, fields, user.role);
+      const data = await reviewApplication(selected.id, action, fields, user.role, selected.updated_at);
       setSelected(data);
       await load();
-      setNotice(data.email_warning || "Application updated in the workflow.");
+      setNotice(data.email_warning || (action === "reject" ? "Application rejected. The applicant can see your reason and reviewer details." : action === "request_action" ? "Action requested. The applicant can see your note." : "Application forwarded / approved successfully."));
     } catch (error) {
       setNotice(error.message);
+    } finally {
+      reviewingRef.current = false;
+      setReviewing(false);
     }
   }
 
@@ -776,13 +814,19 @@ function StaffWorkflowArea({ user }) {
     }
   }
 
+  function matchesFilter(item, value) {
+    if (value === "my_rejections") return (item.history || []).some((event) => event.action === "rejected" && event.actor_id === user.id);
+    if (value === "my_reviews") return (item.history || []).some((event) => event.actor_id === user.id && event.actor_role !== "member");
+    return value === "all" || item.status === value;
+  }
+
   function changeFilter(nextFilter) {
     setFilter(nextFilter);
-    const nextSelected = applications.find((item) => nextFilter === "all" || item.status === nextFilter);
+    const nextSelected = applications.find((item) => matchesFilter(item, nextFilter));
     setSelected(nextSelected || null);
   }
 
-  const filteredApplications = applications.filter((item) => filter === "all" || item.status === filter);
+  const filteredApplications = applications.filter((item) => matchesFilter(item, filter));
   const filters = user.role === ROLES.ADMIN
     ? [
         ["all", "All"],
@@ -792,8 +836,10 @@ function StaffWorkflowArea({ user }) {
         ["approved", "Approved"],
         ["action_required", "Action"],
         ["rejected", "Rejected"],
+        ["my_rejections", "My rejections"],
+        ["my_reviews", "My reviews"],
       ]
-    : [["all", "My queue"], [portal.queueStatus, "Awaiting me"]];
+    : [[portal.queueStatus, "Awaiting me"], ["my_rejections", "My rejections"], ["my_reviews", "My reviews"]];
 
   return (
     <section className={`admin-dashboard ${portal.themeClass}`}>
@@ -805,6 +851,8 @@ function StaffWorkflowArea({ user }) {
         </div>
         <WorkflowTimeline status={selected?.status || portal.queueStatus || "pending_communication"} />
       </div>
+      {notice && <p role="status" className="notice">{notice}</p>}
+      <button type="button" onClick={() => load().catch((error) => setNotice(error.message))} disabled={reviewing}>Refresh queue</button>
       <AdminStats applications={applications} />
       <div className="admin-layout">
         <div className="queue">
@@ -822,6 +870,7 @@ function StaffWorkflowArea({ user }) {
             <button key={item.id} className={selected?.id === item.id ? "queue-item active" : "queue-item"} onClick={() => setSelected(item)}>
               <strong>{item.full_name || "Unnamed applicant"}</strong>
               <span>{item.status_label}</span>
+              {item.submitted_at && <small>{submissionLabel(item)} · {formatDate(item.submitted_at)}</small>}
               <small>{item.phone_number || item.email || "No contact provided"}</small>
             </button>
           ))}
@@ -830,6 +879,7 @@ function StaffWorkflowArea({ user }) {
         {selected ? (
           <WorkflowReview
             application={selected}
+            busy={reviewing}
             user={user}
             onReview={review}
             onDelete={user.role === ROLES.ADMIN ? removeApplication : undefined}
@@ -880,17 +930,17 @@ function StatCard({ icon, label, value }) {
   );
 }
 
-function WorkflowReview({ application, user, onReview, onDelete, notice }) {
+function WorkflowReview({ application, user, onReview, onDelete, notice, busy }) {
   const portal = ROLE_PORTALS[user.role] || ROLE_PORTALS.admin;
   const [fields, setFields] = useState({
     office_registration_number: application.office_registration_number || "",
     office_received_by: application.office_received_by || "",
     office_received_at: application.office_received_at || "",
-    office_comments: application.office_comments || "",
-    action_required_note: application.action_required_note || "",
-    communication_notes: application.communication_notes || "",
-    hr_notes: application.hr_notes || "",
-    finance_notes: application.finance_notes || "",
+    office_comments: "",
+    action_required_note: "",
+    communication_notes: "",
+    hr_notes: "",
+    finance_notes: "",
   });
   const [receiptUrl, setReceiptUrl] = useState("");
 
@@ -899,13 +949,13 @@ function WorkflowReview({ application, user, onReview, onDelete, notice }) {
       office_registration_number: application.office_registration_number || "",
       office_received_by: application.office_received_by || "",
       office_received_at: application.office_received_at || "",
-      office_comments: application.office_comments || "",
-      action_required_note: application.action_required_note || "",
-      communication_notes: application.communication_notes || "",
-      hr_notes: application.hr_notes || "",
-      finance_notes: application.finance_notes || "",
+      office_comments: "",
+      action_required_note: "",
+      communication_notes: "",
+      hr_notes: "",
+      finance_notes: "",
     });
-  }, [application.id]);
+  }, [application.id, application.updated_at]);
 
   useEffect(() => {
     let active = true;
@@ -925,9 +975,7 @@ function WorkflowReview({ application, user, onReview, onDelete, notice }) {
   const notesField = user.role === ROLES.ADMIN
     ? (ROLE_PORTALS[application.status === "pending_communication" ? "communication" : application.status === "pending_hr" ? "hr" : application.status === "pending_finance" ? "finance" : "admin"] || portal).notesField
     : portal.notesField;
-  const canAct = user.role === ROLES.ADMIN
-    ? !["approved", "rejected", "draft"].includes(application.status)
-    : application.status === portal.queueStatus;
+  const canAct = canReviewApplication(user.role, application.status);
 
   return (
     <article className={`review-panel ${portal.themeClass}`}>
@@ -952,6 +1000,7 @@ function WorkflowReview({ application, user, onReview, onDelete, notice }) {
       {notice && <p className={notice.includes("not sent") ? "error" : "notice"}>{notice}</p>}
 
       <WorkflowTimeline status={application.status} />
+      <ApplicationHistory application={application} />
       <DocumentHeader subtitle="SEHEMU YA PILI: FOMU YA USAJILI WA MWANACHAMA" />
 
       <Section title="TAARIFA ZA OFISI">
@@ -983,16 +1032,16 @@ function WorkflowReview({ application, user, onReview, onDelete, notice }) {
       {canAct && (
         <Section title={`${portal.badge} review`}>
           <TextArea label={`${portal.badge} notes`} value={fields[notesField]} onChange={(v) => set(notesField, v)} />
-          <TextArea label="Action required note" value={fields.action_required_note} onChange={(v) => set("action_required_note", v)} />
+          <TextArea label="Rejection / action note (required for Reject or Request action)" value={fields.action_required_note} onChange={(v) => set("action_required_note", v)} />
           <div className="form-actions">
-            <button type="button" onClick={() => onReview("request_action", fields)}>Request action</button>
-            <button type="button" onClick={() => onReview("reject", fields)}>Reject</button>
+            <button type="button" disabled={busy} onClick={() => onReview("request_action", fields)}>Request action</button>
+            <button type="button" disabled={busy} onClick={() => onReview("reject", fields)}>Reject</button>
             {user.role === ROLES.FINANCE || (user.role === ROLES.ADMIN && application.status === "pending_finance") ? (
-              <button type="button" className="primary" onClick={() => onReview("forward", fields)}>
+              <button type="button" className="primary" disabled={busy} onClick={() => onReview("forward", fields)}>
                 Verify payment & approve
               </button>
             ) : (
-              <button type="button" className="primary" onClick={() => onReview("forward", fields)}>
+              <button type="button" className="primary" disabled={busy} onClick={() => onReview("forward", fields)}>
                 {portal.forwardLabel}
               </button>
             )}
@@ -1203,21 +1252,11 @@ function isValidNida(value) {
   return isValidTanzaniaNin(value);
 }
 
-function ageFromBirthdate(value) {
-  if (!value) return "";
-  const birth = new Date(value);
-  if (Number.isNaN(birth.getTime())) return "";
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
-  return age >= 0 ? String(age) : "";
-}
-
 function validatePersonalStep(application) {
   const errors = [];
   if (!String(application.full_name || "").trim()) errors.push("Jina kamili linahitajika.");
   if (!application.gender) errors.push("Jinsia inahitajika.");
+  if (ageFromBirthdate(application.date_of_birth) === "") errors.push("Tarehe ya kuzaliwa inahitajika na haiwezi kuwa ya baadaye.");
   if (!String(application.phone_number || "").trim()) errors.push("Namba ya simu inahitajika.");
   else if (!isValidPhone(application.phone_number)) errors.push("Namba ya simu si sahihi.");
   if (!String(application.email || "").trim()) errors.push("Barua pepe inahitajika.");

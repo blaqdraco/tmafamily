@@ -201,3 +201,23 @@ You should get `{"ok":true,...}`.
 - Staff roles are controlled by `public.profiles.role`.
 - Admin users can also use `public.profiles.is_admin`.
 - Parent/guardian/in-law and child rows are stored as JSON because the source form allows up to four simple repeatable entries.
+
+## Applicant workflow update
+
+For an existing installation, run `supabase/applicant-workflow-update.sql` in the
+Supabase SQL Editor **before deploying the updated frontend**. It installs the
+history and transition rules and creates the two requested member accounts.
+It resets only those two accounts to the requested default password. Names are
+left blank because none were supplied. The final result lists both member accounts.
+
+For a fresh installation, apply `schema.sql`, `workflow-migration.sql`,
+`referee-migration.sql`, then `application-history-migration.sql`.
+
+History records reviewer identity, role, note, previous/new status, and time.
+Existing applications get an earlier-status snapshot; past reviewer identities
+cannot be reconstructed. Staff can find their decisions under My reviews / My
+rejections even after an applicant resubmits. NIDA validation checks the 20-digit
+format only; it does not verify the number against NIDA's registry.
+
+Run `npm test` for the isolated PostgreSQL workflow regression checks and
+`npm run build` for the frontend build. Tests do not connect to Supabase.

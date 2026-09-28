@@ -6,6 +6,10 @@ import {
   WORKFLOW_STATUSES,
   isStaffRole,
   registrationLockMessage,
+  ageFromBirthdate,
+  isValidTanzaniaNin,
+  canReviewApplication,
+  requiredReviewNote,
 } from "./workflowConfig";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
@@ -81,18 +85,15 @@ function cleanApplication(application) {
     "declaration_accepted",
     "payment_receipt_path",
     "payment_receipt_uploaded_at",
-    "payment_verified",
-    "payment_verified_at",
   ].forEach((field) => {
     if (application[field] !== undefined) payload[field] = application[field];
   });
 
   return {
     ...payload,
-    age: payload.age === "" ? null : payload.age,
+    age: ageFromBirthdate(payload.date_of_birth) === "" ? null : Number(ageFromBirthdate(payload.date_of_birth)),
     work_experience_years: payload.work_experience_years === "" ? null : payload.work_experience_years,
     date_of_birth: payload.date_of_birth || null,
-    office_received_at: payload.office_received_at || null,
     referee_application_id: payload.referee_application_id === "" || payload.referee_application_id == null
       ? null
       : Number(payload.referee_application_id),
@@ -193,7 +194,7 @@ export async function listMyApplications() {
 
   const { data, error } = await supabase
     .from("membership_applications")
-    .select("*")
+    .select("*, history:application_history(*)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   raise(error);
@@ -211,6 +212,8 @@ export async function saveApplication(application, submit = false) {
 
   let nextStatus = application.status || WORKFLOW_STATUSES.DRAFT;
   if (submit) {
+    if (!isValidTanzaniaNin(application.nida_number)) throw new Error("Enter a valid 20-digit NIDA number (digits only or YYYYMMDD-XXXXX-XXXXX-XX).");
+    if (ageFromBirthdate(application.date_of_birth) === "") throw new Error("Enter a valid date of birth that is not in the future.");
     nextStatus = WORKFLOW_STATUSES.PENDING_COMMUNICATION;
   } else if (![WORKFLOW_STATUSES.DRAFT, WORKFLOW_STATUSES.ACTION_REQUIRED].includes(nextStatus)) {
     nextStatus = application.status;
@@ -229,7 +232,8 @@ export async function saveApplication(application, submit = false) {
       .update(payload)
       .eq("id", application.id)
       .eq("user_id", user.id)
-      .in("status", ["draft", "action_required", "rejected"])
+      .eq("status", application.status)
+      .eq("updated_at", application.updated_at)
       .select()
       .maybeSingle();
     raise(error);
@@ -252,16 +256,11 @@ export async function listApplicationsForRole(role) {
   requireSupabase();
   const { data, error } = await supabase
     .from("membership_applications")
-    .select("*")
+    .select("*, history:application_history(*)")
     .order("created_at", { ascending: false });
   raise(error);
 
-  const applications = (data || []).map(withStatusLabel);
-  if (role === ROLES.ADMIN) return applications;
-
-  const portal = ROLE_PORTALS[role];
-  if (!portal?.queueStatus) return applications;
-  return applications.filter((item) => item.status === portal.queueStatus);
+  return (data || []).map(withStatusLabel);
 }
 
 export async function getPaymentReceiptUrl(path) {
@@ -310,12 +309,15 @@ function resolveAdminPortal(application) {
 function buildWorkflowUpdate(role, action, fields, application) {
   const now = new Date().toISOString();
   const portal = role === ROLES.ADMIN ? resolveAdminPortal(application) : (ROLE_PORTALS[role] || ROLE_PORTALS.admin);
-  const notes = fields[portal.notesField] || fields.office_comments || fields.action_required_note || "";
+  const notes = requiredReviewNote(fields, portal.notesField);
+  if (["reject", "request_action"].includes(action) && !notes) {
+    throw new Error("A rejection or action note is required. Explain what the applicant needs to correct.");
+  }
 
   if (action === "request_action") {
     return {
       status: WORKFLOW_STATUSES.ACTION_REQUIRED,
-      action_required_note: fields.action_required_note || notes,
+      action_required_note: notes,
       reviewed_at: now,
     };
   }
@@ -325,7 +327,7 @@ function buildWorkflowUpdate(role, action, fields, application) {
       status: WORKFLOW_STATUSES.REJECTED,
       reviewed_at: now,
       office_comments: fields.office_comments || application.office_comments || "",
-      action_required_note: fields.action_required_note || "",
+      action_required_note: action === "reject" ? notes : "",
     };
     if (notes) update[portal.notesField] = notes;
     if (portal === ROLE_PORTALS.communication) update.communication_reviewed_at = now;
@@ -365,7 +367,7 @@ function buildWorkflowUpdate(role, action, fields, application) {
       [portal.reviewedAtField]: now,
       reviewed_at: now,
       office_comments: fields.office_comments || application.office_comments || "",
-      action_required_note: fields.action_required_note || "",
+      action_required_note: action === "reject" ? notes : "",
       office_registration_number: fields.office_registration_number || application.office_registration_number || "",
       office_received_by: fields.office_received_by || application.office_received_by || "",
       office_received_at: fields.office_received_at || application.office_received_at || null,
@@ -375,24 +377,31 @@ function buildWorkflowUpdate(role, action, fields, application) {
   throw new Error("Unsupported workflow action.");
 }
 
-export async function reviewApplication(id, action, fields, role) {
+export async function reviewApplication(id, action, fields, role, expectedUpdatedAt) {
   requireSupabase();
 
   const { data: existing, error: existingError } = await supabase
     .from("membership_applications")
-    .select("*")
+    .select("*, history:application_history(*)")
     .eq("id", id)
     .single();
   raise(existingError);
+
+  if (existing.updated_at !== expectedUpdatedAt || !canReviewApplication(role, existing.status)) {
+    throw new Error("This application has already been reviewed or its status changed. Refresh the queue before acting again.");
+  }
 
   const updatePayload = buildWorkflowUpdate(role, action, fields, existing);
   const { data, error } = await supabase
     .from("membership_applications")
     .update(updatePayload)
     .eq("id", id)
+    .eq("status", existing.status)
+    .eq("updated_at", existing.updated_at)
     .select()
-    .single();
+    .maybeSingle();
   raise(error);
+  if (!data) throw new Error("This application was changed by another reviewer. Refresh the queue before acting again.");
 
   const application = withStatusLabel(data);
   const shouldEmail = action === "reject" || action === "request_action" || (action === "forward" && role === ROLES.FINANCE);
@@ -410,7 +419,7 @@ export async function reviewApplication(id, action, fields, role) {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ application, action: emailAction, fields }),
+          body: JSON.stringify({ application, action: emailAction, fields: { ...fields, action_required_note: application.action_required_note } }),
         });
         if (!emailResponse.ok) {
           const emailData = await emailResponse.json().catch(() => ({}));

@@ -5,12 +5,14 @@
     "build": "cd frontend && npm run build",
     "supabase:seed": "supabase db execute --file supabase/seed.sql --linked",
     "supabase:seed:local": "supabase db reset",
-    "db:setup": "python3 scripts/run_supabase_sql.py supabase/workflow-migration.sql supabase/seed.sql"
+    "db:setup": "python3 scripts/run_supabase_sql.py supabase/workflow-migration.sql supabase/seed.sql",
+    "test": "node scripts/test-workflow.mjs"
   },
   "dependencies": {
     "nodemailer": "^9.0.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "supabase": "^2.20.12"
   }
 }

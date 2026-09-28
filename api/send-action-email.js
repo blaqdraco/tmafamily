@@ -18,9 +18,9 @@ const statusContent = {
   },
   reject: {
     subject: "TMA Family registration update",
-    heading: "Your registration was not approved",
+    heading: "Your registration was rejected",
     intro: "Your TMA Family membership registration has been reviewed and was not approved at this time.",
-    badge: "Not approved",
+    badge: "Rejected",
     accent: "#d32f2f",
     accentSoft: "#fdeaea",
   },
@@ -111,7 +111,7 @@ async function getCurrentUser(token) {
 
 function emailHtml({ application, action, fields }) {
   const content = statusContent[action];
-  const comments = fields.office_comments || fields.action_required_note || "";
+  const comments = application.action_required_note || fields.action_required_note || fields.office_comments || "";
   const name = escapeHtml(application.full_name || "member");
   const registrationNumber = escapeHtml(application.office_registration_number || "");
   const noteHtml = escapeHtml(comments).replace(/\n/g, "<br>");
@@ -213,7 +213,7 @@ function emailHtml({ application, action, fields }) {
 
 function emailText({ application, action, fields }) {
   const content = statusContent[action];
-  const comments = fields.office_comments || fields.action_required_note || "";
+  const comments = application.action_required_note || fields.action_required_note || fields.office_comments || "";
   const siteUrl = portalUrl();
   const lines = [
     content.heading,

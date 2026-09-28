@@ -118,5 +118,34 @@ export function formatNida(value) {
 }
 
 export function isValidTanzaniaNin(value) {
-  return digitsOnly(value).length === 20;
+  return /^(?:[0-9]{20}|[0-9]{8}-[0-9]{5}-[0-9]{5}-[0-9]{2})$/.test(String(value || "").trim());
+}
+
+export function ageFromBirthdate(value, today = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return "";
+  const [year, month, day] = value.split("-").map(Number);
+  const birth = new Date(year, month - 1, day);
+  if (year < 1 || birth.getFullYear() !== year || birth.getMonth() !== month - 1 || birth.getDate() !== day) return "";
+  let age = today.getFullYear() - year;
+  if (today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day)) age -= 1;
+  return age >= 0 ? String(age) : "";
+}
+
+export function canReviewApplication(role, status) {
+  const reviewStages = ["pending_communication", "pending_hr", "pending_finance"];
+  return role === ROLES.ADMIN ? reviewStages.includes(status) : ROLE_PORTALS[role]?.queueStatus === status;
+}
+
+export function requiredReviewNote(fields, notesField) {
+  return [fields.action_required_note, fields[notesField], fields.office_comments]
+    .map((value) => String(value || "").trim()).find(Boolean) || "";
+}
+
+export function sortedHistory(application) {
+  return [...(application.history || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at) || Number(b.id) - Number(a.id));
+}
+
+export function submissionLabel(application) {
+  const event = sortedHistory(application).find((item) => ["submitted", "resubmitted"].includes(item.action));
+  return event?.action === "resubmitted" ? "Resubmitted" : "Submitted";
 }

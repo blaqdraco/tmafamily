@@ -1,8 +1,10 @@
 -- Create applicant (member) accounts, bypassing normal registration.
 -- Default password for all accounts: TMAFAMILY@2026
--- Run in Supabase SQL Editor (or: python3 scripts/run_supabase_sql.py supabase/seed-applicants.sql)
+-- Run in Supabase SQL Editor (or: python3 scripts/run_supabase_sql.py supabase/seed-new-applicants.sql)
 
+begin;
 create extension if not exists pgcrypto;
+set local search_path = public, extensions;
 
 do $$
 declare
@@ -14,10 +16,6 @@ begin
     select *
     from (
       values
-        ('charlesdanielmandia@gmail.com', 'Charles', 'Mandia'),
-        ('singanosalome@gmail.com', 'Salome', 'Singano'),
-        ('ntwale79@gmail.com', 'Ntwale', 'Member'),
-        ('jkalamule@yahoo.com', 'J', 'Kalamule'),
         ('masakirudiael@gmail.com', '', ''),
         ('drmasoud05@gmail.com', '', '')
     ) as users(email, first_name, last_name)
@@ -25,6 +23,12 @@ begin
     select id into new_user_id
     from auth.users
     where lower(email) = lower(user_record.email);
+
+    if new_user_id is not null and exists (
+      select 1 from public.profiles where id = new_user_id and (is_admin or role <> 'member')
+    ) then
+      raise exception 'Existing account % is a staff account; refusing to change its role.', user_record.email;
+    end if;
 
     if new_user_id is null then
       new_user_id := gen_random_uuid();
@@ -72,11 +76,7 @@ begin
       set
         encrypted_password = crypt(default_password, gen_salt('bf')),
         email_confirmed_at = coalesce(email_confirmed_at, now()),
-        raw_user_meta_data = jsonb_build_object(
-          'username', split_part(lower(user_record.email), '@', 1),
-          'first_name', user_record.first_name,
-          'last_name', user_record.last_name
-        ),
+        raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('username', split_part(lower(user_record.email), '@', 1)),
         updated_at = now()
       where id = new_user_id;
     end if;
@@ -119,10 +119,12 @@ begin
     on conflict (id) do update
     set
       username = excluded.username,
-      first_name = excluded.first_name,
-      last_name = excluded.last_name,
+      first_name = coalesce(public.profiles.first_name, excluded.first_name),
+      last_name = coalesce(public.profiles.last_name, excluded.last_name),
       is_admin = false,
       role = 'member',
       updated_at = now();
   end loop;
 end $$;
+
+commit;

@@ -125,7 +125,7 @@ to authenticated
 using (public.is_staff())
 with check (public.is_staff());
 
-.drop policy if exists "Admins can delete applications" on public.membership_applications;
+drop policy if exists "Admins can delete applications" on public.membership_applications;
 drop policy if exists "Staff can delete applications" on public.membership_applications;
 create policy "Admins can delete applications"
 on public.membership_applications for delete
