@@ -89,8 +89,13 @@ function cleanApplication(application) {
     if (application[field] !== undefined) payload[field] = application[field];
   });
 
+  const maxParents = payload.marital_status === "single" ? 2 : 4;
+  const rawParents = Array.isArray(payload.parents) ? payload.parents : [];
+  const parents = Array.from({ length: maxParents }, (_, i) => rawParents[i] || { full_name: "", relationship: "", phone_number: "" });
+
   return {
     ...payload,
+    parents,
     age: ageFromBirthdate(payload.date_of_birth) === "" ? null : Number(ageFromBirthdate(payload.date_of_birth)),
     work_experience_years: payload.work_experience_years === "" ? null : payload.work_experience_years,
     date_of_birth: payload.date_of_birth || null,
@@ -215,7 +220,7 @@ export async function saveApplication(application, submit = false) {
     if (!isValidTanzaniaNin(application.nida_number)) throw new Error("Enter a valid 20-digit NIDA number (digits only or YYYYMMDD-XXXXX-XXXXX-XX).");
     if (ageFromBirthdate(application.date_of_birth) === "") throw new Error("Enter a valid date of birth that is not in the future.");
     nextStatus = WORKFLOW_STATUSES.PENDING_COMMUNICATION;
-  } else if (![WORKFLOW_STATUSES.DRAFT, WORKFLOW_STATUSES.ACTION_REQUIRED].includes(nextStatus)) {
+  } else if (![WORKFLOW_STATUSES.DRAFT, WORKFLOW_STATUSES.ACTION_REQUIRED, WORKFLOW_STATUSES.REJECTED].includes(nextStatus)) {
     nextStatus = application.status;
   }
 
