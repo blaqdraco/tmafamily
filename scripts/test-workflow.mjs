@@ -97,6 +97,22 @@ await db.exec(`update public.membership_applications set payment_receipt_path='r
 await rejects(`update public.membership_applications set full_name='Overwrite during review' where id=${app.id}`, /Only the payment receipt/);
 await as('admin');
 await db.exec(`update public.membership_applications set status='pending_finance' where id=${app.id}`);
+// Verify each migration permits receipt-free approval and preserves the approval audit.
+await db.exec("reset role; select set_config('request.jwt.claim.sub','',false)");
+const optionalReceiptMigration = await readFile(new URL('../supabase/finance-optional-receipt-migration.sql', import.meta.url), 'utf8');
+for (const sql of [migration, optionalReceiptMigration, optionalReceiptMigration]) {
+  await db.exec(sql);
+  await db.exec('begin');
+  await db.exec(`update public.membership_applications set payment_receipt_path='' where id=${app.id}`);
+  await as('finance');
+  await db.exec(`update public.membership_applications set status='approved', payment_verified=true, finance_notes='Verified against previous member records' where id=${app.id}`);
+  const approval = (await db.query(`select * from public.application_history where application_id=${app.id} and action='approved'`)).rows;
+  assert.equal(approval.length, 1);
+  assert.equal(approval[0].actor_id, ids.finance);
+  assert.equal(approval[0].note, 'Verified against previous member records');
+  assert.equal((await db.query(`select payment_receipt_path from public.membership_applications where id=${app.id}`)).rows[0].payment_receipt_path, '');
+  await db.exec('rollback');
+}
 await as('finance');
 await db.exec(`update public.membership_applications set status='approved', payment_verified=true where id=${app.id}`);
 await rejects(`update public.membership_applications set status='rejected', action_required_note='Too late' where id=${app.id}`, /already been reviewed/);

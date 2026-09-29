@@ -1,40 +1,7 @@
--- Apply after workflow-migration.sql. Existing history cannot identify past reviewers.
+-- Run after application-history-migration.sql or applicant-workflow-update.sql.
+-- Allows Finance approval for legacy payments without receipts; preserves workflow protections.
+-- Safe to rerun. Does not create accounts or reset passwords.
 begin;
-
-create table if not exists public.application_history (
-  id bigint generated always as identity primary key,
-  application_id bigint not null references public.membership_applications(id) on delete cascade,
-  actor_id uuid references auth.users(id) on delete set null,
-  actor_name text,
-  actor_role text,
-  action text not null,
-  from_status text,
-  to_status text not null,
-  note text not null default '',
-  created_at timestamptz not null default now()
-);
-create index if not exists application_history_application_idx on public.application_history(application_id, created_at);
-create index if not exists application_history_actor_idx on public.application_history(actor_id, action);
-alter table public.application_history enable row level security;
-revoke all on public.application_history from anon, authenticated;
-grant select on public.application_history to authenticated;
-drop policy if exists "Read own or staff application history" on public.application_history;
-create policy "Read own or staff application history" on public.application_history for select to authenticated
-using (exists (select 1 from public.membership_applications a where a.id = application_id and (a.user_id = auth.uid() or public.is_staff())));
-
--- Preserve known older status and notes without inventing a reviewer or event date.
-insert into public.application_history(application_id, action, to_status, note, created_at)
-select a.id, 'legacy_status', a.status,
-  coalesce(nullif(a.action_required_note, ''), nullif(a.office_comments, ''), ''),
-  coalesce(a.reviewed_at, a.submitted_at, a.created_at)
-from public.membership_applications a
-where not exists (select 1 from public.application_history h where h.application_id = a.id);
-
--- Keep returned applications editable, including saving corrections before resubmission.
-drop policy if exists "Members can update editable own applications" on public.membership_applications;
-create policy "Members can update editable own applications" on public.membership_applications for update to authenticated
-using (user_id = auth.uid() and status in ('draft', 'action_required', 'rejected', 'pending_hr', 'pending_finance'))
-with check (user_id = auth.uid() and status in ('draft', 'action_required', 'rejected', 'pending_communication', 'pending_hr', 'pending_finance'));
 
 create or replace function public.validate_application_workflow()
 returns trigger language plpgsql security definer set search_path = '' as $$
@@ -132,49 +99,5 @@ begin
 end;
 $$;
 revoke all on function public.validate_application_workflow() from public;
-drop trigger if exists application_workflow_validation on public.membership_applications;
-create trigger application_workflow_validation before insert or update on public.membership_applications
-for each row execute function public.validate_application_workflow();
-
-create or replace function public.record_application_history()
-returns trigger language plpgsql security definer set search_path = '' as $$
-declare
-  actor uuid := auth.uid();
-  actor_name text;
-  actor_role text;
-  event_action text;
-  event_note text := '';
-  previous_status text;
-begin
-  if tg_op = 'UPDATE' and old.status = new.status then return new; end if;
-  if tg_op = 'UPDATE' then previous_status := old.status; end if;
-  select coalesce(nullif(btrim(concat_ws(' ', p.first_name, p.last_name)), ''), p.username),
-    case when p.is_admin then 'admin' else p.role end into actor_name, actor_role
-  from public.profiles p where p.id = actor;
-  event_action := case new.status
-    when 'draft' then 'draft'
-    when 'pending_communication' then
-      case when previous_status in ('rejected','action_required') or exists (
-        select 1 from public.application_history h where h.application_id = new.id and
-        (h.action in ('submitted','resubmitted','rejected','action_required') or (h.action = 'legacy_status' and h.to_status <> 'draft'))
-      ) then 'resubmitted' else 'submitted' end
-    when 'rejected' then 'rejected'
-    when 'action_required' then 'action_required'
-    when 'approved' then 'approved'
-    else 'forwarded' end;
-  if new.status in ('rejected','action_required') then event_note := new.action_required_note;
-  elsif previous_status = 'pending_communication' then event_note := new.communication_notes;
-  elsif previous_status = 'pending_hr' then event_note := new.hr_notes;
-  elsif previous_status = 'pending_finance' then event_note := new.finance_notes;
-  end if;
-  insert into public.application_history(application_id, actor_id, actor_name, actor_role, action, from_status, to_status, note)
-  values(new.id, actor, actor_name, actor_role, event_action, previous_status, new.status, coalesce(event_note, ''));
-  return new;
-end;
-$$;
-revoke all on function public.record_application_history() from public;
-drop trigger if exists application_history_record on public.membership_applications;
-create trigger application_history_record after insert or update on public.membership_applications
-for each row execute function public.record_application_history();
 notify pgrst, 'reload schema';
 commit;

@@ -347,9 +347,6 @@ function buildWorkflowUpdate(role, action, fields, application) {
       : portal.forwardStatus;
 
     if (role === ROLES.FINANCE || (role === ROLES.ADMIN && application.status === WORKFLOW_STATUSES.PENDING_FINANCE)) {
-      if (!application.payment_receipt_path) {
-        throw new Error("Payment receipt must be uploaded before finance can approve.");
-      }
       return {
         status: WORKFLOW_STATUSES.APPROVED,
         finance_notes: fields.finance_notes || notes,

@@ -130,9 +130,7 @@ begin
     elsif new.status in ('pending_hr', 'pending_finance', 'approved') then
       new.action_required_note := '';
     end if;
-    if new.status = 'approved' and coalesce(new.payment_receipt_path, '') = '' then
-      raise exception 'Upload a payment receipt before approval.';
-    end if;
+    -- Finance may verify legacy payments without an uploaded receipt.
   end if;
   return new;
 end;

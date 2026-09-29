@@ -792,6 +792,9 @@ function StaffWorkflowArea({ user }) {
 
   async function review(action, fields) {
     if (reviewingRef.current || !selected) return;
+    if (action === "forward" && selected.status === "pending_finance" && !selected.payment_receipt_path?.trim()) {
+      if (!window.confirm("No payment receipt is uploaded for this applicant. Continue only if you have verified the payment another way, such as previous member records. Approve without a receipt?")) return;
+    }
     reviewingRef.current = true;
     setReviewing(true);
     setNotice("");
@@ -1030,7 +1033,7 @@ function WorkflowReview({ application, user, onReview, onDelete, notice, busy })
                 Open payment receipt proof
               </a>
             ) : (
-              <p className="muted">No payment receipt uploaded yet.</p>
+              <p className="muted">No payment receipt uploaded yet. For previous members, Finance can verify payment using existing records and confirm approval without a receipt.</p>
             )}
           </div>
         </Section>
